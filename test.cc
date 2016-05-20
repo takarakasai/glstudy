@@ -458,6 +458,8 @@ public:
 
     obj.unbind();
     unbind();
+
+    return 0;
   }
 
   errno_t draw() {
@@ -475,6 +477,8 @@ public:
     //glDrawArrays(mode_, 0, 3);
 
     unbind();
+
+    return 0;
   }
 };
 
@@ -508,6 +512,8 @@ public:
     for (auto obj : objs) {
       obj->draw();
     }
+
+    return 0;
   }
 };
 
@@ -529,10 +535,6 @@ std::vector<Eigen::Vector2f> circle_tbl (size_t slices) {
 }
 
 class cylinder : public vaos {
-  
-}
-
-class cylinder2 : public vaos {
 private:
   GLfloat radius;
   GLfloat height;
