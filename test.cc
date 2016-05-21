@@ -201,6 +201,7 @@ GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const 
   //プログラムオブジェクトをリンクする
   glBindAttribLocation(program, 0, pv);
   glBindFragDataLocation(program, 0, fc);
+
   glLinkProgram(program);
 
   if (printProgramInfoLog(program)) {
@@ -945,10 +946,16 @@ int main()
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);
+    //glfwSwapInterval(1);
 
     //イベントを取り出す
+#ifdef __APPLE__
+    /* non block */
+    glfwPollEvents();
+#else
+    /* non block */
     glfwWaitEvents();
-    //glfwSwapInterval(1);
+#endif
 
     cmeasure.update();
 
