@@ -372,16 +372,31 @@ public:
     glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
  
-  void setdata (std::vector<Eigen::Vector3f>& verteces) {
+  void setdata (std::vector<Eigen::Vector3f>& vertices) {
     bind();
     /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
-    size_ = verteces.size();
-    noe_ = sizeof(verteces[0]) / sizeof(verteces[0][0]);
-    data_size_ = sizeof(verteces[0]);
+    size_ = vertices.size();
+    noe_ = sizeof(vertices[0]) / sizeof(vertices[0][0]);
+    data_size_ = sizeof(vertices[0]);
     //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
-    glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &verteces[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
   }
+
+#if 0
+  // TODO: delete
+  void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<Eigen::Vector3f>& indices) {
+    bind();
+    /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
+    size_ = vertices.size();
+    noe_ = sizeof(vertices[0]) / sizeof(vertices[0][0]);
+    data_size_ = sizeof(vertices[0]);
+    //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
+    glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+    unbind();
+  }
+#endif
+
 };
 
 class vao {
@@ -547,39 +562,39 @@ public:
     : radius(radius), height(height), sectors(sectors), vaos(3) {
 
     const GLfloat r = radius;
-    std::vector<Eigen::Vector3f> top_verteces;
-    std::vector<Eigen::Vector3f> mid_verteces;
-    std::vector<Eigen::Vector3f> btm_verteces;
+    std::vector<Eigen::Vector3f> top_vertices;
+    std::vector<Eigen::Vector3f> mid_vertices;
+    std::vector<Eigen::Vector3f> btm_vertices;
 
     auto circle  = circle_tbl(sectors);
 
-    top_verteces.push_back(Eigen::Vector3f(0.0, 0.0, +height/2.0)); /* top */
-    btm_verteces.push_back(Eigen::Vector3f(0.0, 0.0, -height/2.0)); /* btm */
+    top_vertices.push_back(Eigen::Vector3f(0.0, 0.0, +height/2.0)); /* top */
+    btm_vertices.push_back(Eigen::Vector3f(0.0, 0.0, -height/2.0)); /* btm */
     for (auto vec : circle) {
       auto rvec = r * vec;
 
       /* top */
-      top_verteces.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
+      top_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
       /* mid */
-      mid_verteces.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
-      mid_verteces.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
       /* btm */
-      btm_verteces.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
+      btm_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
     }
 
     /* CAUTION
      * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
      * */
     vbo top, btm, mid;
-    top.setdata(top_verteces);
+    top.setdata(top_vertices);
     vaos::operator[](0).setup(GL_TRIANGLE_FAN, circle.size() + 1);
     vaos::operator[](0).setvbo(0, top);
 
-    mid.setdata(mid_verteces);
+    mid.setdata(mid_vertices);
     vaos::operator[](1).setup(GL_TRIANGLE_STRIP, 2 * circle.size());
     vaos::operator[](1).setvbo(0, mid);
 
-    btm.setdata(btm_verteces);
+    btm.setdata(btm_vertices);
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, circle.size() + 1);
     vaos::operator[](2).setvbo(0, btm);
   }
@@ -598,22 +613,22 @@ public:
     const GLfloat r = radius;
 
     /* top & bottom */
-    std::vector<Eigen::Vector3f> top_verteces;
-    std::vector<Eigen::Vector3f> mid_verteces;
-    std::vector<Eigen::Vector3f> btm_verteces;
+    std::vector<Eigen::Vector3f> top_vertices;
+    std::vector<Eigen::Vector3f> mid_vertices;
+    std::vector<Eigen::Vector3f> btm_vertices;
 
-    top_verteces.push_back(Eigen::Vector3f(0.0, 0.0, +r));
-    btm_verteces.push_back(Eigen::Vector3f(0.0, 0.0, -r));
+    top_vertices.push_back(Eigen::Vector3f(0.0, 0.0, +r));
+    btm_vertices.push_back(Eigen::Vector3f(0.0, 0.0, -r));
     for (size_t i = 1; i < pn_r + 2; i++) {
       GLfloat rad = PI * 1 / pn_h;
       GLfloat r_h   = r * sin(rad);
       GLfloat rad_h = 2 * PI * i / pn_r;
 
-      top_verteces.push_back(Eigen::Vector3f(
+      top_vertices.push_back(Eigen::Vector3f(
                   r_h * cos(rad_h),
                   r_h * sin(rad_h),
                   r   * cos(rad)));
-      btm_verteces.push_back(Eigen::Vector3f(
+      btm_vertices.push_back(Eigen::Vector3f(
                   r_h * cos(rad_h),
                   r_h * sin(rad_h),
                  -r   * cos(rad)));
@@ -628,8 +643,8 @@ public:
       GLfloat r_v2   = r * cos(rad_v2);
       for (size_t i = 0; i < pn_r + 1; i++) {
         GLfloat rad_h = 2 * PI * i / pn_r;
-        mid_verteces.push_back(Eigen::Vector3f(r_h2 * cos(rad_h), r_h2 * sin(rad_h), r_v2));
-        mid_verteces.push_back(Eigen::Vector3f(r_h1 * cos(rad_h), r_h1 * sin(rad_h), r_v1));
+        mid_vertices.push_back(Eigen::Vector3f(r_h2 * cos(rad_h), r_h2 * sin(rad_h), r_v2));
+        mid_vertices.push_back(Eigen::Vector3f(r_h1 * cos(rad_h), r_h1 * sin(rad_h), r_v1));
       }
     }
 
@@ -637,18 +652,18 @@ public:
      * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
      * */
     vbo top, btm, mid;
-    top.setdata(top_verteces);
+    top.setdata(top_vertices);
     vaos::operator[](0).setup(GL_TRIANGLE_FAN, num_of_rpart + 2);
     //vaos::operator[](0).setup(GL_POINTS, num_of_rpart + 2);
     vaos::operator[](0).setvbo(0, top);
-    mid.setdata(mid_verteces);
+    mid.setdata(mid_vertices);
     //vaos::operator[](1).setup(GL_LINES, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_POINTS, (pn_h - 2) * (pn_r + 1) * 2);
     vaos::operator[](1).setup(GL_TRIANGLE_STRIP, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_LINE_STRIP, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_TRIANGLES, (pn_h - 2) * (pn_r + 1) * 2);
     vaos::operator[](1).setvbo(0, mid);
-    btm.setdata(btm_verteces);
+    btm.setdata(btm_vertices);
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, num_of_rpart + 2);
     //vaos::operator[](2).setup(GL_POINTS, num_of_rpart + 2);
     vaos::operator[](2).setvbo(0, btm);
@@ -673,23 +688,23 @@ public:
 
     const GLfloat r = radius;
 
-    std::vector<Eigen::Vector3f> verteces;
-    verteces.push_back(Eigen::Vector3f(0.0, 0.0, r));
+    std::vector<Eigen::Vector3f> vertices;
+    vertices.push_back(Eigen::Vector3f(0.0, 0.0, r));
     for (size_t i = 1; i < pn_r + 2; i++) {
       GLfloat rad = PI * 1 / pn_h;
       GLfloat r_h   = r * sin(rad);
       GLfloat rad_h = 2 * PI * i / pn_r;
 
-      verteces.push_back(Eigen::Vector3f(
+      vertices.push_back(Eigen::Vector3f(
                   r_h * cos(rad_h),
                   r_h * sin(rad_h),
                   r   * cos(rad)));
 
-      printf("%d %lf %lf %lf\n", (int)i, verteces[i][0], verteces[i][1], verteces[i][2]);
+      printf("%d %lf %lf %lf\n", (int)i, vertices[i][0], vertices[i][1], vertices[i][2]);
     }
 
     vbo obj;
-    obj.setdata(verteces);
+    obj.setdata(vertices);
     setvbo(0, obj);
 
     return;
