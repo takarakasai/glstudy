@@ -8,6 +8,8 @@
 #include <time.h> // for clock_gettime()
 #include <cstring>
 
+#include <iostream>
+
 #include "cycle_measure.h"
 
 GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const char *fc);
@@ -383,9 +385,8 @@ public:
     unbind();
   }
 
-#if 0
   // TODO: delete
-  void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<Eigen::Vector3f>& indices) {
+  void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<GLuint>& indices) {
     bind();
     /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
     size_ = vertices.size();
@@ -394,8 +395,16 @@ public:
     //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
     glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
+
+    GLuint ebo;
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    printf("vbo(%u)::setdata =====:%zd %zd vs %zd\n", ebo, indices.size(), sizeof(indices[0]), vertices.size());
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    unbind();
   }
-#endif
 
 };
 
@@ -458,6 +467,7 @@ public:
 
     bind();
     obj.bind();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 5);
 
     /* enable to access VAO with in variable at shader code */
     /* 1st arg of glVertexAttribPointer is linked to 
@@ -488,9 +498,12 @@ public:
     bind();
 
     // glDrawElementsの場合はどうする?
-    // glDrawElements(mode_, size_, GL_UNSIGNED_INT, 0);
-    glDrawArrays(mode_, 0, num_of_data_);
-    //glDrawArrays(mode_, 0, 3);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 5);
+    //glDrawArrays(mode_, 0, num_of_data_);
+    glDrawElements(mode_, num_of_data_, GL_UNSIGNED_INT, 0);
+    //GLuint idx[] = {0,20,1,21,2,22,3,23,4,24,5,25,6,26,7,27,8,28,9,29,10,30,11,31,12,32,13,33,14,34,15,35,16,36,17,37,18,38,19,39};
+    //GLuint idx[] = {19,20,21,22,23,24,0,1,2,3,4,5};
+    //glDrawElements(GL_LINES, sizeof(idx)/sizeof(idx[0]), GL_UNSIGNED_INT, (void*)idx);
 
     unbind();
 
@@ -559,6 +572,48 @@ private:
 public:
 
   cylinder (GLfloat radius, GLfloat height, size_t sectors)
+    : radius(radius), height(height), sectors(sectors), vaos(1) {
+
+    const GLfloat r = radius;
+    std::vector<Eigen::Vector3f> mid_vertices;
+    std::vector<GLuint> mid_indices;
+
+    auto circle  = circle_tbl(sectors);
+
+    for (auto vec : circle) {
+      auto rvec = r * vec;
+      /* mid */
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
+    }
+
+    for (auto vec : circle) {
+      auto rvec = r * vec;
+      /* mid */
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
+    }
+
+    for (size_t i = 0; i < circle.size(); i++) {
+      mid_indices.push_back(i);
+      mid_indices.push_back(i + circle.size());
+    }
+
+    std::cout << "EEEEEEEEEEE\n";
+    for (auto & idx : mid_indices) {
+      std::cout << " " << idx;
+    }
+    std::cout << std::endl;
+
+    /* CAUTION
+     * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
+     * */
+    vbo mid;
+    mid.setdata(mid_vertices, mid_indices);
+    vaos::operator[](0).setup(GL_TRIANGLE_STRIP, 2 * circle.size());
+    vaos::operator[](0).setvbo(0, mid);
+  }
+
+#if 0
+  cylinder (GLfloat radius, GLfloat height, size_t sectors)
     : radius(radius), height(height), sectors(sectors), vaos(3) {
 
     const GLfloat r = radius;
@@ -598,6 +653,7 @@ public:
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, circle.size() + 1);
     vaos::operator[](2).setvbo(0, btm);
   }
+#endif
 
 };
 
