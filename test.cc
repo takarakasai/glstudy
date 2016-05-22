@@ -8,6 +8,8 @@
 #include <time.h> // for clock_gettime()
 #include <cstring>
 
+#include <iostream>
+
 #include "cycle_measure.h"
 
 GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const char *fc);
@@ -15,6 +17,8 @@ GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const 
 static GLfloat aspect_ratio = 0;
 static GLfloat size[2] = {0,0};
 static GLfloat dpm = 100.0;
+
+#define DPRINTF(...) 
 
 /*
 ** シェーダーのソースプログラムをメモリに読み込む
@@ -335,7 +339,9 @@ private:
   //using namespace std;
   //using namespace Eigen;
 
-  /* drawing mode */
+  /* buffer id */
+  GLuint buffer_id_;
+
   GLuint id;
 
   size_t noe_; /* num of elements */
@@ -344,12 +350,15 @@ private:
 
 public:
  
-  vbo() {
+  vbo(GLuint buffer_id = GL_ARRAY_BUFFER) {
+    buffer_id_ = buffer_id;
     glGenBuffers(1, &id);
+    DPRINTF(" glGenBuffers: 0x%0x 0x%x\n", buffer_id, id);
   }
 
   virtual ~vbo() {
     glDeleteBuffers(1, &id);
+    DPRINTF(" glDeleteBuffers: (0x%0x) 0x%x\n", buffer_id_, id);
   }
 
   size_t size() {
@@ -364,12 +373,16 @@ public:
     return data_size_;
   }
 
-  void bind (void) {
-    glBindBuffer(GL_ARRAY_BUFFER, id);
+  void bind () {
+    glBindBuffer(buffer_id_, id);
+    DPRINTF(" glBindBuffer: 0x%0x 0x%x\n", buffer_id_, id);
+    //glBindBuffer(GL_ARRAY_BUFFER, id);
   }
 
   void unbind (void) {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(buffer_id_, 0);
+    DPRINTF(" glBindBuffers: 0x%0x 0x%x -- unbind\n", buffer_id_, id);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
  
   void setdata (std::vector<Eigen::Vector3f>& vertices) {
@@ -378,14 +391,30 @@ public:
     size_ = vertices.size();
     noe_ = sizeof(vertices[0]) / sizeof(vertices[0][0]);
     data_size_ = sizeof(vertices[0]);
+    glBufferData(buffer_id_, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+    DPRINTF(" glBufferData 3f: 0x%0x\n", buffer_id_);
+
     //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
-    glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
   }
 
-#if 0
+  void setdata (std::vector<GLuint>& indices) {
+    bind();
+
+    size_ = indices.size();
+    noe_ = sizeof(indices[0]);
+    data_size_ = sizeof(indices[0]);
+    glBufferData(buffer_id_, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+    DPRINTF(" glBufferData ui: 0x%0x\n", buffer_id_);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+
+    unbind();
+  }
+ 
+
   // TODO: delete
-  void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<Eigen::Vector3f>& indices) {
+  void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<GLuint>& indices) {
     bind();
     /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
     size_ = vertices.size();
@@ -394,8 +423,16 @@ public:
     //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
     glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
+
+    GLuint ebo;
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    DPRINTF("vbo(%u)::setdata =====:%zd %zd vs %zd\n", ebo, indices.size(), sizeof(indices[0]), vertices.size());
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    unbind();
   }
-#endif
 
 };
 
@@ -405,7 +442,7 @@ private:
   size_t num_of_data_;
   GLenum mode_;
 
-  std::vector<vbo> objs;
+  std::vector<std::shared_ptr<vbo>> objs;
 
 public:
 
@@ -425,10 +462,12 @@ public:
     : mode_(0), num_of_data_(0)
   {
     glGenVertexArrays(1, &id);
+    DPRINTF(" glGenVertexArrays: 0x%0x\n", id);
   }
 
   virtual ~vao() {
     glDeleteVertexArrays(1, &id);
+    DPRINTF(" glDeleteVertexArrays: 0x%0x\n", id);
   }
 
   void setup (GLenum mode, size_t num_of_data) {
@@ -438,26 +477,31 @@ public:
 
   void bind() {
     glBindVertexArray(id);
+    DPRINTF(" glBindVertexArrays: 0x%0x\n", id);
   }
 
   void unbind() {
     glBindVertexArray(0);
+    DPRINTF(" glBindVertexArrays: 0x%0x -- unbind\n", id);
   }
 
   void setmode(const GLenum mode) {
     mode_ = mode;
   }
 
-  errno_t setvbo(const GLint attr_idx, vbo &obj) {
-    if (obj.size() != num_of_data_) {
-      printf("ERROR------------------- %zd vs %zd\n", obj.size(), num_of_data_);
+  errno_t setvbo(const GLint attr_idx, std::shared_ptr<vbo> obj, std::shared_ptr<vbo> subobj) {
+    if (obj->size() != num_of_data_) {
+      printf("ERROR------------------- %zd vs %zd\n", obj->size(), num_of_data_);
       return EINVAL;
     }
 
     objs.push_back(obj);
+    objs.push_back(subobj);
 
     bind();
-    obj.bind();
+    subobj->bind();
+    obj->bind();
+
 
     /* enable to access VAO with in variable at shader code */
     /* 1st arg of glVertexAttribPointer is linked to 
@@ -469,10 +513,42 @@ public:
      * 第5引数は1データセットのサイズ、データセットは複数のattributeにより構成される. attributeが1つなら0でOK.
      * 第6引数は1データセット中のattributeの位置. attributeが1つなら0でOK.
      */ 
-    glVertexAttribPointer(attr_idx, obj.num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(attr_idx, subobj->num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(attr_idx);
+    DPRINTF(" glVertexAttribPointer: 0x%0x size(%zd)\n", attr_idx, subobj->num_of_elem());
+
+    //subobj.unbind();
+    //obj.unbind();
+    unbind();
+
+    return 0;
+  }
+
+  errno_t setvbo(const GLint attr_idx, std::shared_ptr<vbo> obj) {
+    if (obj->size() != num_of_data_) {
+      printf("ERROR------------------- %zd vs %zd\n", obj->size(), num_of_data_);
+      return EINVAL;
+    }
+
+    objs.push_back(obj);
+
+    bind();
+    obj->bind();
+
+    /* enable to access VAO with in variable at shader code */
+    /* 1st arg of glVertexAttribPointer is linked to 
+     *   glEnableVertexAttribArray (*)
+     *   glDisableVertexAttribArray(*)
+     *   glBindAttribLocation      (-,*, -)
+     * 第1引数はattributeの番号
+     * 第2引数はattributeのサイズ
+     * 第5引数は1データセットのサイズ、データセットは複数のattributeにより構成される. attributeが1つなら0でOK.
+     * 第6引数は1データセット中のattributeの位置. attributeが1つなら0でOK.
+     */ 
+    glVertexAttribPointer(attr_idx, obj->num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(attr_idx);
 
-    obj.unbind();
+    obj->unbind();
     unbind();
 
     return 0;
@@ -488,9 +564,12 @@ public:
     bind();
 
     // glDrawElementsの場合はどうする?
-    // glDrawElements(mode_, size_, GL_UNSIGNED_INT, 0);
-    glDrawArrays(mode_, 0, num_of_data_);
-    //glDrawArrays(mode_, 0, 3);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 5);
+    //glDrawArrays(mode_, 0, num_of_data_);
+    glDrawElements(mode_, num_of_data_, GL_UNSIGNED_INT, 0);
+    //GLuint idx[] = {0,20,1,21,2,22,3,23,4,24,5,25,6,26,7,27,8,28,9,29,10,30,11,31,12,32,13,33,14,34,15,35,16,36,17,37,18,38,19,39};
+    //GLuint idx[] = {19,20,21,22,23,24,0,1,2,3,4,5};
+    //glDrawElements(GL_LINES, sizeof(idx)/sizeof(idx[0]), GL_UNSIGNED_INT, (void*)idx);
 
     unbind();
 
@@ -559,6 +638,54 @@ private:
 public:
 
   cylinder (GLfloat radius, GLfloat height, size_t sectors)
+    : radius(radius), height(height), sectors(sectors), vaos(1) {
+
+    const GLfloat r = radius;
+    std::vector<Eigen::Vector3f> mid_vertices;
+    std::vector<GLuint> mid_indices;
+
+    auto circle  = circle_tbl(sectors);
+
+    for (auto vec : circle) {
+      auto rvec = r * vec;
+      /* mid */
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
+    }
+
+    for (auto vec : circle) {
+      auto rvec = r * vec;
+      /* mid */
+      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
+    }
+
+    for (size_t i = 0; i < circle.size(); i++) {
+      mid_indices.push_back(i);
+      mid_indices.push_back(i + circle.size());
+    }
+
+    std::cout << "EEEEEEEEEEE\n";
+    for (auto & idx : mid_indices) {
+      std::cout << " " << idx;
+    }
+    std::cout << std::endl;
+
+    /* CAUTION
+     * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
+     * */
+    vaos::operator[](0).setup(GL_TRIANGLE_STRIP, 2 * circle.size());
+
+    auto mid = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto idx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    //vbo mid(GL_ARRAY_BUFFER), mid_idx(GL_ELEMENT_ARRAY_BUFFER);
+    mid->setdata(mid_vertices);
+    idx->setdata(mid_indices);
+    vaos::operator[](0).setvbo(0, idx, mid);
+    //vaos::operator[](0).setvbo(0, mid);
+    //vaos::operator[](0).setvbo(0, mid_idx);
+  }
+
+#if 0
+  cylinder (GLfloat radius, GLfloat height, size_t sectors)
     : radius(radius), height(height), sectors(sectors), vaos(3) {
 
     const GLfloat r = radius;
@@ -598,6 +725,7 @@ public:
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, circle.size() + 1);
     vaos::operator[](2).setvbo(0, btm);
   }
+#endif
 
 };
 
@@ -651,19 +779,22 @@ public:
     /* CAUTION
      * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
      * */
-    vbo top, btm, mid;
-    top.setdata(top_vertices);
+    //vbo top, btm, mid;
+    auto top = std::make_shared<vbo>();
+    auto btm = std::make_shared<vbo>();
+    auto mid = std::make_shared<vbo>();
+    top->setdata(top_vertices);
     vaos::operator[](0).setup(GL_TRIANGLE_FAN, num_of_rpart + 2);
     //vaos::operator[](0).setup(GL_POINTS, num_of_rpart + 2);
     vaos::operator[](0).setvbo(0, top);
-    mid.setdata(mid_vertices);
+    mid->setdata(mid_vertices);
     //vaos::operator[](1).setup(GL_LINES, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_POINTS, (pn_h - 2) * (pn_r + 1) * 2);
     vaos::operator[](1).setup(GL_TRIANGLE_STRIP, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_LINE_STRIP, (pn_h - 2) * (pn_r + 1) * 2);
     //vaos::operator[](1).setup(GL_TRIANGLES, (pn_h - 2) * (pn_r + 1) * 2);
     vaos::operator[](1).setvbo(0, mid);
-    btm.setdata(btm_vertices);
+    btm->setdata(btm_vertices);
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, num_of_rpart + 2);
     //vaos::operator[](2).setup(GL_POINTS, num_of_rpart + 2);
     vaos::operator[](2).setvbo(0, btm);
@@ -703,8 +834,9 @@ public:
       printf("%d %lf %lf %lf\n", (int)i, vertices[i][0], vertices[i][1], vertices[i][2]);
     }
 
-    vbo obj;
-    obj.setdata(vertices);
+    //vbo obj;
+    auto obj = std::make_shared<vbo>();
+    obj->setdata(vertices);
     setvbo(0, obj);
 
     return;
