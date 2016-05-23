@@ -310,6 +310,12 @@ void multiplyMatrix(const GLfloat *m0, const GLfloat *m1, GLfloat *matrix)
 }
 
 static GLfloat projectionMatrix[16];
+static GLfloat transformMatrix[16] = {
+  1.0, 0.00, 0.00, 0.0,
+  0.0, 0.71,-0.71, 0.0,
+  0.0, 0.71, 0.71, 0.0,
+  0.0, 0.00, 0.00, 1.0
+};
 
 // 形状データ
 typedef struct s_Object {
@@ -971,6 +977,7 @@ int main()
 
   //const GLint aspectLoc = glGetUniformLocation(program, "aspect");
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
+  const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
   const GLint sizeLoc = glGetUniformLocation(program, "size");
   const GLint dpmLoc = glGetUniformLocation(program, "dpm");
   printf("sizeLoc : %d\n", sizeLoc);
@@ -1067,6 +1074,7 @@ int main()
     glUseProgram(program);
 
     glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, projectionMatrix);
+    glUniformMatrix4fv(transformMatrixLocation, 1, GL_FALSE, transformMatrix);
 
     //glUniform1f(aspectLoc, aspect_ratio);
     glUniform2fv(sizeLoc, 1, size);
