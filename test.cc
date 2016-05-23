@@ -8,8 +8,6 @@
 #include <time.h> // for clock_gettime()
 #include <cstring>
 
-#include <iostream>
-
 #include "cycle_measure.h"
 
 GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const char *fc);
@@ -662,12 +660,6 @@ public:
       mid_indices.push_back(i);
       mid_indices.push_back(i + circle.size());
     }
-
-    std::cout << "EEEEEEEEEEE\n";
-    for (auto & idx : mid_indices) {
-      std::cout << " " << idx;
-    }
-    std::cout << std::endl;
 
     /* CAUTION
      * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
