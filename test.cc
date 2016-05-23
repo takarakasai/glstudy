@@ -337,7 +337,9 @@ private:
   //using namespace std;
   //using namespace Eigen;
 
-  /* drawing mode */
+  /* buffer id */
+  GLuint buffer_id_;
+
   GLuint id;
 
   size_t noe_; /* num of elements */
@@ -346,7 +348,8 @@ private:
 
 public:
  
-  vbo() {
+  vbo(GLuint buffer_id = GL_ARRAY_BUFFER) {
+    buffer_id_ = buffer_id;
     glGenBuffers(1, &id);
   }
 
@@ -366,12 +369,14 @@ public:
     return data_size_;
   }
 
-  void bind (void) {
-    glBindBuffer(GL_ARRAY_BUFFER, id);
+  void bind () {
+    glBindBuffer(buffer_id_, id);
+    //glBindBuffer(GL_ARRAY_BUFFER, id);
   }
 
   void unbind (void) {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(buffer_id_, 0);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
  
   void setdata (std::vector<Eigen::Vector3f>& vertices) {
@@ -380,10 +385,25 @@ public:
     size_ = vertices.size();
     noe_ = sizeof(vertices[0]) / sizeof(vertices[0][0]);
     data_size_ = sizeof(vertices[0]);
+    glBufferData(buffer_id_, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+
     //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
-    glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
   }
+
+  void setdata (std::vector<GLuint>& indices) {
+    bind();
+
+    size_ = indices.size();
+    noe_ = sizeof(indices[0]);
+    data_size_ = sizeof(indices[0]);
+    glBufferData(buffer_id_, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
+
+    unbind();
+  }
+ 
 
   // TODO: delete
   void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<GLuint>& indices) {
@@ -457,6 +477,40 @@ public:
     mode_ = mode;
   }
 
+  errno_t setvbo(const GLint attr_idx, vbo &obj, vbo& subobj) {
+    if (obj.size() != num_of_data_) {
+      printf("ERROR------------------- %zd vs %zd\n", obj.size(), num_of_data_);
+      return EINVAL;
+    }
+
+    objs.push_back(obj);
+    objs.push_back(subobj);
+
+    bind();
+    subobj.bind();
+    obj.bind();
+
+    /* enable to access VAO with in variable at shader code */
+    /* 1st arg of glVertexAttribPointer is linked to 
+     *   glEnableVertexAttribArray (*)
+     *   glDisableVertexAttribArray(*)
+     *   glBindAttribLocation      (-,*, -)
+     * 第1引数はattributeの番号
+     * 第2引数はattributeのサイズ
+     * 第5引数は1データセットのサイズ、データセットは複数のattributeにより構成される. attributeが1つなら0でOK.
+     * 第6引数は1データセット中のattributeの位置. attributeが1つなら0でOK.
+     */ 
+    glVertexAttribPointer(attr_idx, obj.num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(attr_idx);
+
+    subobj.unbind();
+    obj.unbind();
+    unbind();
+
+    return 0;
+ 
+  }
+
   errno_t setvbo(const GLint attr_idx, vbo &obj) {
     if (obj.size() != num_of_data_) {
       printf("ERROR------------------- %zd vs %zd\n", obj.size(), num_of_data_);
@@ -467,7 +521,6 @@ public:
 
     bind();
     obj.bind();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 5);
 
     /* enable to access VAO with in variable at shader code */
     /* 1st arg of glVertexAttribPointer is linked to 
@@ -606,10 +659,14 @@ public:
     /* CAUTION
      * GL_QUADS & GL_QUAD_STRIP are not allowed for glDrawArrays
      * */
-    vbo mid;
-    mid.setdata(mid_vertices, mid_indices);
     vaos::operator[](0).setup(GL_TRIANGLE_STRIP, 2 * circle.size());
-    vaos::operator[](0).setvbo(0, mid);
+
+    vbo mid(GL_ARRAY_BUFFER), mid_idx(GL_ELEMENT_ARRAY_BUFFER);
+    mid.setdata(mid_vertices);
+    mid_idx.setdata(mid_indices);
+    vaos::operator[](0).setvbo(0, mid_idx, mid);
+    //vaos::operator[](0).setvbo(0, mid);
+    //vaos::operator[](0).setvbo(0, mid_idx);
   }
 
 #if 0
