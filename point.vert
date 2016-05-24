@@ -4,10 +4,13 @@ uniform float dpm;
 uniform mat4 transformMatrix;
 uniform mat4 projectionMatrix;
 in vec4 pv;
-out vec3 diffuseColor;
+in vec4 normal;
+out vec3 f_pos;
+out vec3 f_normal;
 void main()
 {
   gl_Position = projectionMatrix * transformMatrix * pv;
-  diffuseColor = vec3(gl_Position.z);
+  f_pos       =                   (transformMatrix * pv).xyz;
+  f_normal    =                   (transformMatrix * normal).xyz;
 }
 

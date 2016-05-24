@@ -10,7 +10,10 @@
 
 #include "cycle_measure.h"
 
-GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const char *fc);
+#include <list>
+#include <string>
+
+GLuint createProgram (const char *vsrc, const std::list<std::string> attrs, const char *fsrc, const char *fc);
 
 static GLfloat aspect_ratio = 0;
 static GLfloat size[2] = {0,0};
@@ -72,12 +75,12 @@ const GLchar* readShaderSource(const char *file)
 // pv: バーテックスシェーダのソースプログラム中のin変数名の文字列
 // frag: フラグメントシェーダのソースファイル名
 // fc: フラグメントシェーダのソースプログラム中のout変数名の文字列
-GLuint loadProgram (const char *vert, const char *pv, const char *frag, const char *fc) {
+GLuint loadProgram (const char *vert, const std::list<std::string> &attrs, const char *frag, const char *fc) {
   //シェーダのソースファイルを読み込む
   const GLchar *vsrc = (readShaderSource(vert));
   const GLchar *fsrc = (readShaderSource(frag));
   // プログラムオブジェクトを作成する
-  const GLuint program = (createProgram(vsrc, pv, fsrc, fc));
+  const GLuint program = (createProgram(vsrc, attrs, fsrc, fc));
   // 読み込みに使ったメモリを解放する
   free((GLchar*)vsrc);
   free((GLchar*)fsrc);
@@ -159,7 +162,7 @@ GLboolean printProgramInfoLog(GLuint program) {
 // fsrc: フラグメントシェーダのソースプログラムの文字列
 // fc: フラグメントシェーダのソースプログラム中のout変数名の文字列
 
-GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const char *fc)
+GLuint createProgram (const char *vsrc, const std::list<std::string> attrs, const char *fsrc, const char *fc)
 {
 
   //空のプログラムオブジェクトを作成する
@@ -201,7 +204,12 @@ GLuint createProgram (const char *vsrc, const char *pv, const char *fsrc, const 
 
   ////
   //プログラムオブジェクトをリンクする
-  glBindAttribLocation(program, 0, pv);
+  GLuint idx = 0;
+  for (auto &attr : attrs) {
+    glBindAttribLocation(program, idx++, attr.c_str());
+    printf("glBindAttribLocation: %u %u %s\n", program, idx, attr.c_str());
+  }
+  //glBindAttribLocation(program, 0, pv);
   glBindFragDataLocation(program, 0, fc);
 
   glLinkProgram(program);
@@ -646,6 +654,7 @@ public:
 
     const GLfloat r = radius;
     std::vector<Eigen::Vector3f> mid_vertices;
+    std::vector<Eigen::Vector3f> mid_normals;
     std::vector<GLuint> mid_indices;
 
     auto circle  = circle_tbl(sectors);
@@ -653,13 +662,21 @@ public:
     for (auto vec : circle) {
       auto rvec = r * vec;
       /* mid */
-      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
+      Eigen::Vector3f pvec(rvec(0), rvec(1), +height/2.0);
+      auto nvec = pvec / pvec.norm();
+      mid_vertices.push_back(pvec);
+      mid_normals.push_back(nvec);
+      //mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
     }
 
     for (auto vec : circle) {
       auto rvec = r * vec;
       /* mid */
-      mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
+      Eigen::Vector3f pvec(rvec(0), rvec(1), -height/2.0);
+      auto nvec = pvec / pvec.norm();
+      mid_vertices.push_back(pvec);
+      mid_normals.push_back(nvec);
+      //mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
     }
 
     for (size_t i = 0; i < circle.size(); i++) {
@@ -672,14 +689,14 @@ public:
      * */
     vaos::operator[](0).setup(GL_TRIANGLE_STRIP, 2 * circle.size());
 
-    auto mid = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
     auto idx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
-    //vbo mid(GL_ARRAY_BUFFER), mid_idx(GL_ELEMENT_ARRAY_BUFFER);
-    mid->setdata(mid_vertices);
+    vert->setdata(mid_vertices);
+    norm->setdata(mid_normals);
     idx->setdata(mid_indices);
-    vaos::operator[](0).setvbo(0, idx, mid);
-    //vaos::operator[](0).setvbo(0, mid);
-    //vaos::operator[](0).setvbo(0, mid_idx);
+    vaos::operator[](0).setvbo(0, idx, vert);
+    vaos::operator[](0).setvbo(1, norm);
   }
 
 #if 0
@@ -973,7 +990,8 @@ int main()
 
   //プログラムオブジェクトを作成する
   //const GLuint program = createProgram(vsrc, "pv", fsrc, "fc");
-  const GLuint program = loadProgram("point.vert", "pv", "point.frag", "fc");
+  const GLuint program = loadProgram("point.vert", {"pv", "normal"}, "point.frag", "fc");
+  //const GLuint program = loadProgram("point.vert", {"pv"}, "point.frag", "fc");
 
   //const GLint aspectLoc = glGetUniformLocation(program, "aspect");
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
