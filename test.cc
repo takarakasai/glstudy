@@ -396,7 +396,7 @@ public:
     DPRINTF(" glBindBuffers: 0x%0x 0x%x -- unbind\n", buffer_id_, id);
     //glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
- 
+
   void setdata (std::vector<Eigen::Vector3f>& vertices) {
     bind();
     /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
@@ -425,6 +425,7 @@ public:
   }
  
 
+#if 0
   // TODO: delete
   void setdata (std::vector<Eigen::Vector3f>& vertices, std::vector<GLuint>& indices) {
     bind();
@@ -445,6 +446,7 @@ public:
 
     unbind();
   }
+#endif
 
 };
 
@@ -503,7 +505,7 @@ public:
 
   errno_t setvbo(const GLint attr_idx, std::shared_ptr<vbo> obj, std::shared_ptr<vbo> subobj) {
     if (obj->size() != num_of_data_) {
-      printf("ERROR------------------- %zd vs %zd\n", obj->size(), num_of_data_);
+      printf("ERROR2------------------ %zd vs %zd\n", obj->size(), num_of_data_);
       return EINVAL;
     }
 
@@ -537,10 +539,10 @@ public:
   }
 
   errno_t setvbo(const GLint attr_idx, std::shared_ptr<vbo> obj) {
-    if (obj->size() != num_of_data_) {
-      printf("ERROR------------------- %zd vs %zd\n", obj->size(), num_of_data_);
-      return EINVAL;
-    }
+    //if (obj->size() != num_of_data_) {
+    //  printf("ERROR------------------- %zd vs %zd\n", obj->size(), num_of_data_);
+    //  return EINVAL;
+    //}
 
     objs.push_back(obj);
 
@@ -641,6 +643,128 @@ std::vector<Eigen::Vector2f> circle_tbl (size_t slices) {
   return vecs;
 }
 
+typedef struct sVertices {
+  std::vector<Eigen::Vector3f> poses; /* position vectors */
+  std::vector<Eigen::Vector3f> norms; /* normal vectors   */
+
+  void push (Eigen::Vector3f pos) {
+    poses.push_back(pos);
+    norms.push_back(pos / pos.norm());
+  }
+
+  size_t size () {
+    return poses.size();
+  }
+} Vertices;
+
+Vertices cylinderVertices (GLfloat radius, GLfloat height, size_t sectors) {
+  Vertices verts;
+
+  const GLfloat r = radius;
+  auto circle  = circle_tbl(sectors);
+
+  verts.push(Eigen::Vector3f(0, 0, +height/2.0));
+  verts.push(Eigen::Vector3f(0, 0, -height/2.0));
+
+  for (auto vec : circle) {
+    auto rvec = r * vec;
+    Eigen::Vector3f pvec(rvec(0), rvec(1), +height/2.0);
+    verts.push(pvec);
+  }
+
+  for (auto vec : circle) {
+    auto rvec = r * vec;
+    Eigen::Vector3f pvec(rvec(0), rvec(1), -height/2.0);
+    verts.push(pvec);
+  }
+
+  return verts;
+}
+
+Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh) {
+  Vertices verts;
+
+  const GLfloat r = radius;
+  auto circle  = circle_tbl(nor);
+
+  verts.push(Eigen::Vector3f(0, 0, +r));
+
+  for (size_t i = 1; i < noh; i++) {
+    auto rad = PI * i / noh;
+    auto h   = r * cos(rad);
+    auto rv  = r * sin(rad);
+
+    for (auto vec : circle) {
+      auto rvec = rv * vec;
+      verts.push(Eigen::Vector3f(rvec(0), rvec(1), h));
+    }
+  }
+
+  verts.push(Eigen::Vector3f(0, 0, -r));
+
+  return verts;
+}
+
+class sphere : public vaos {
+private:
+  GLfloat radius;
+  GLint nor, noh;
+
+public:
+  sphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : radius(radius), nor(num_of_rpart), noh(num_of_hpart), vaos(3) {
+
+    Vertices verts = sphereVertices(radius, nor, noh);
+
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    vert->setdata(verts.poses);
+    norm->setdata(verts.norms);
+
+    const size_t offset = 1;
+
+    std::vector<GLuint> top_indices;
+    std::vector<GLuint> side_indices;
+    std::vector<GLuint> btm_indices;
+    top_indices.push_back(0);
+    btm_indices.push_back(verts.size() - 1);
+    for (size_t i = 0; i < nor + 1; i++) {
+      top_indices.push_back(i + offset);
+      btm_indices.push_back(i + verts.size() - 1 - (noh + 1));
+    }
+
+    for (size_t i = 0; i < noh - 1; i++) {
+      for (size_t j = 0; j < nor + 1; j++) {
+        side_indices.push_back( i      * (nor + 1) + offset + j);
+        side_indices.push_back((i + 1) * (nor + 1) + offset + j);
+      }
+    }
+
+    auto tidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    auto sidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    auto bidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+
+    tidx->setdata(top_indices);
+    sidx->setdata(side_indices);
+    bidx->setdata(btm_indices);
+
+    /* top */
+    vaos::operator[](0).setup(GL_TRIANGLE_FAN, tidx->size());
+    vaos::operator[](0).setvbo(0, tidx, vert);
+    vaos::operator[](0).setvbo(1, norm);
+
+    /* side */
+    vaos::operator[](1).setup(GL_TRIANGLE_STRIP, sidx->size());
+    vaos::operator[](1).setvbo(0, sidx, vert);
+    vaos::operator[](1).setvbo(1, norm);
+
+    /* btm */
+    vaos::operator[](2).setup(GL_TRIANGLE_FAN, bidx->size());
+    vaos::operator[](2).setvbo(0, bidx, vert);
+    vaos::operator[](2).setvbo(1, norm);
+  }
+};
+
 class cylinder : public vaos {
 private:
   GLfloat radius;
@@ -649,6 +773,56 @@ private:
 
 public:
 
+  cylinder (GLfloat radius, GLfloat height, size_t sectors)
+    : radius(radius), height(height), sectors(sectors), vaos(3) {
+
+    Vertices verts = cylinderVertices(radius, height, sectors);
+
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    vert->setdata(verts.poses);
+    norm->setdata(verts.norms);
+
+    const size_t num_of_slices = (verts.size() - 2) / 2;
+    const size_t offset = 2;
+
+    std::vector<GLuint> top_indices;
+    std::vector<GLuint> side_indices;
+    std::vector<GLuint> btm_indices;
+    top_indices.push_back(0);
+    btm_indices.push_back(1);
+    for (size_t i = 0; i < num_of_slices; i++) {
+      top_indices.push_back(i + offset);
+      side_indices.push_back(i + offset);
+      side_indices.push_back(i + offset + num_of_slices);
+      btm_indices.push_back(i + offset + num_of_slices);
+    }
+
+    auto tidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    auto sidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    auto bidx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+
+    tidx->setdata(top_indices);
+    sidx->setdata(side_indices);
+    bidx->setdata(btm_indices);
+
+    /* top */
+    vaos::operator[](0).setup(GL_TRIANGLE_FAN, tidx->size());
+    vaos::operator[](0).setvbo(0, tidx, vert);
+    vaos::operator[](0).setvbo(1, norm);
+
+    /* side */
+    vaos::operator[](1).setup(GL_TRIANGLE_STRIP, sidx->size());
+    vaos::operator[](1).setvbo(0, sidx, vert);
+    vaos::operator[](1).setvbo(1, norm);
+
+    /* btm */
+    vaos::operator[](2).setup(GL_TRIANGLE_FAN, bidx->size());
+    vaos::operator[](2).setvbo(0, bidx, vert);
+    vaos::operator[](2).setvbo(1, norm);
+  }
+
+#if 0
   cylinder (GLfloat radius, GLfloat height, size_t sectors)
     : radius(radius), height(height), sectors(sectors), vaos(1) {
 
@@ -666,7 +840,6 @@ public:
       auto nvec = pvec / pvec.norm();
       mid_vertices.push_back(pvec);
       mid_normals.push_back(nvec);
-      //mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), +height/2.0));
     }
 
     for (auto vec : circle) {
@@ -676,7 +849,6 @@ public:
       auto nvec = pvec / pvec.norm();
       mid_vertices.push_back(pvec);
       mid_normals.push_back(nvec);
-      //mid_vertices.push_back(Eigen::Vector3f(rvec(0), rvec(1), -height/2.0));
     }
 
     for (size_t i = 0; i < circle.size(); i++) {
@@ -698,6 +870,7 @@ public:
     vaos::operator[](0).setvbo(0, idx, vert);
     vaos::operator[](0).setvbo(1, norm);
   }
+#endif
 
 #if 0
   cylinder (GLfloat radius, GLfloat height, size_t sectors)
@@ -744,13 +917,13 @@ public:
 
 };
 
-class sphere : public vaos {
+class sphere2 : public vaos {
 private:
   GLfloat radius;
   GLint pn_r, pn_h;
 
 public:
-  sphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+  sphere2 (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
     : radius(radius), pn_r(num_of_rpart), pn_h(num_of_hpart), vaos(3) {
 
     const GLfloat r = radius;
@@ -817,17 +990,17 @@ public:
     return;
   }
 
-  virtual ~sphere () {
+  virtual ~sphere2 () {
   }
 };
 
-class sphere2 : public vao {
+class sphere3 : public vao {
 private:
   GLfloat radius;
   GLint pn_r, pn_h;
 
 public:
-  sphere2 (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+  sphere3 (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
     : radius(radius), pn_r(num_of_rpart), pn_h(num_of_hpart), vao() {
 
     setup(GL_TRIANGLE_FAN, num_of_rpart + 2);
@@ -857,7 +1030,7 @@ public:
     return;
   }
 
-  virtual ~sphere2() {
+  virtual ~sphere3() {
   }
 
 };
@@ -1007,7 +1180,8 @@ int main()
   const Object sphere1 = createShpere(0.5, 3, 3);
 
   //sphere sphere2(0.5, 10, 20);
-  cylinder sphere2(0.5, 1.0, 20);
+  sphere obj(0.5, 20, 20);
+  //cylinder obj(0.5, 1.0, 20);
 
   GLfloat veloc = 0.05;
   GLfloat cpos[3] = {+2.0, 0.0, 0.0};
@@ -1107,7 +1281,7 @@ int main()
     //glDrawArrays(GL_TRIANGLE_STRIP, 0, object.count);
     //glDrawArrays(GL_QUAD_STRIP, 0, object.count);
 
-    sphere2.draw();
+    obj.draw();
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);
