@@ -403,11 +403,10 @@ public:
     size_ = vertices.size();
     noe_ = sizeof(vertices[0]) / sizeof(vertices[0][0]);
     data_size_ = sizeof(vertices[0]);
+
     glBufferData(buffer_id_, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     DPRINTF(" glBufferData 3f: 0x%0x\n", buffer_id_);
 
-    //printf("=====:%zd %zd %zd\n", size_, nov_, data_size_);
-    //glBufferData(GL_ARRAY_BUFFER, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
     unbind();
   }
 
@@ -417,9 +416,9 @@ public:
     size_ = indices.size();
     noe_ = sizeof(indices[0]);
     data_size_ = sizeof(indices[0]);
+
     glBufferData(buffer_id_, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
     DPRINTF(" glBufferData ui: 0x%0x\n", buffer_id_);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices[0], GL_STATIC_DRAW);
 
     unbind();
   }
@@ -705,6 +704,123 @@ Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh) {
   return verts;
 }
 
+class TriPartedObject : public vaos {
+private:
+
+protected:
+  Vertices vertices_;
+
+  static const size_t kTopIdx = 0;
+  static const size_t kSidIdx = 1;
+  static const size_t kBtmIdx = 2;
+  static const size_t kNofIdx = 3;
+  std::vector<GLuint> indices_[kNofIdx];
+
+public:
+
+  void BuildObject (int draw_mode[3] = (int[3]){GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN}) {
+
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    vert->setdata(vertices_.poses);
+    norm->setdata(vertices_.norms);
+
+    std::shared_ptr<vbo> vbo_indices[kNofIdx];
+
+    size_t i = 0;
+    for (auto idx : vbo_indices) {
+      idx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+
+      idx->setdata(indices_[i]);
+      vaos::operator[](i).setup(draw_mode[i], idx->size());
+      vaos::operator[](i).setvbo(0, idx, vert);
+      vaos::operator[](i).setvbo(1, norm);
+
+      i++;
+    }
+  };
+
+  TriPartedObject() : vaos(3) {};
+  virtual ~TriPartedObject() {};
+};
+
+class WiredSphere : public TriPartedObject {
+private:
+  GLfloat radius;
+  GLint nor, noh;
+
+public:
+  WiredSphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : radius(radius), nor(num_of_rpart), noh(num_of_hpart) {
+
+    /* make vertices */
+    vertices_ = sphereVertices(radius, nor, noh);
+
+    const size_t offset = 1;
+
+    /* make indices */
+    for (size_t i = 0; i < nor + 1; i++) {
+      /* top pyramid */
+      indices_[kTopIdx].push_back(0);
+      indices_[kTopIdx].push_back(i + offset);
+
+      /* top horizonal circle */
+      indices_[kSidIdx].push_back(i + offset);
+
+      /* bottom pyramid */
+      indices_[kBtmIdx].push_back(    vertices_.size() - 1);
+      indices_[kBtmIdx].push_back(i + vertices_.size() - 1 - (nor + 1));
+    }
+
+    for (size_t i = 0; i < noh - 2; i++) {
+      for (size_t j = 0; j < nor + 1; j++) {
+        /* lines between every sequential two horizonal circles */
+        indices_[kSidIdx].push_back( i      * (nor + 1) + offset + j);
+        indices_[kSidIdx].push_back((i + 1) * (nor + 1) + offset + j);
+      }
+      for (size_t j = 0; j < nor + 1; j++) {
+        /* other horizonal circles */
+        indices_[kSidIdx].push_back((i + 1) * (nor + 1) + offset + j);
+      }
+    }
+
+    BuildObject((int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+  }
+};
+
+class SolidSphere : public TriPartedObject {
+private:
+  GLfloat radius;
+  GLint nor, noh;
+
+public:
+  SolidSphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : radius(radius), nor(num_of_rpart), noh(num_of_hpart) {
+
+    /* make vertices */
+    vertices_ = sphereVertices(radius, nor, noh);
+
+    const size_t offset = 1;
+
+    /* make indices */
+    indices_[kTopIdx].push_back(0);
+    indices_[kBtmIdx].push_back(vertices_.size() - 1);
+    for (size_t i = 0; i < nor + 1; i++) {
+      indices_[kTopIdx].push_back(i + offset);
+      indices_[kBtmIdx].push_back(i + vertices_.size() - 1 - (nor + 1));
+    }
+
+    for (size_t i = 0; i < noh - 1; i++) {
+      for (size_t j = 0; j < nor + 1; j++) {
+        indices_[kSidIdx].push_back( i      * (nor + 1) + offset + j);
+        indices_[kSidIdx].push_back((i + 1) * (nor + 1) + offset + j);
+      }
+    }
+
+    BuildObject();
+  }
+};
+
 class sphere : public vaos {
 private:
   GLfloat radius;
@@ -762,6 +878,37 @@ public:
     vaos::operator[](2).setup(GL_TRIANGLE_FAN, bidx->size());
     vaos::operator[](2).setvbo(0, bidx, vert);
     vaos::operator[](2).setvbo(1, norm);
+  }
+};
+
+class SolidCylinder : public TriPartedObject {
+private:
+  GLfloat radius;
+  GLfloat height;
+  size_t sectors;
+
+public:
+
+  SolidCylinder (GLfloat radius, GLfloat height, size_t sectors)
+    : radius(radius), height(height), sectors(sectors) {
+
+    /* make vertices */
+    vertices_ = cylinderVertices(radius, height, sectors);
+
+    /* make indices */
+    const size_t num_of_slices = (vertices_.size() - 2) / 2;
+    const size_t offset = 2;
+
+    indices_[kTopIdx].push_back(0);
+    indices_[kBtmIdx].push_back(1);
+    for (size_t i = 0; i < num_of_slices; i++) {
+      indices_[kTopIdx].push_back(i + offset);
+      indices_[kSidIdx].push_back(i + offset);
+      indices_[kSidIdx].push_back(i + offset + num_of_slices);
+      indices_[kBtmIdx].push_back(i + offset + num_of_slices);
+    }
+
+    BuildObject();
   }
 };
 
@@ -1180,7 +1327,10 @@ int main()
   const Object sphere1 = createShpere(0.5, 3, 3);
 
   //sphere sphere2(0.5, 10, 20);
-  sphere obj(0.5, 20, 20);
+  //sphere obj(0.5, 20, 20);
+  //SolidSphere obj(0.5, 20, 3);
+  //WiredSphere obj(0.5, 20, 10);
+  SolidCylinder obj(0.5, 1.0, 20);
   //cylinder obj(0.5, 1.0, 20);
 
   GLfloat veloc = 0.05;
