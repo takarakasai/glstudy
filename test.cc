@@ -881,6 +881,51 @@ public:
   }
 };
 
+class WiredCylinder : public TriPartedObject {
+private:
+  GLfloat radius;
+  GLfloat height;
+  size_t sectors;
+
+public:
+
+  WiredCylinder (GLfloat radius, GLfloat height, size_t sectors)
+    : radius(radius), height(height), sectors(sectors) {
+
+    /* make vertices */
+    vertices_ = cylinderVertices(radius, height, sectors);
+
+    /* make indices */
+    const size_t num_of_slices = (vertices_.size() - 2) / 2;
+    const size_t offset = 2;
+
+    /* make indices */
+    for (size_t i = 0; i < sectors + 1; i++) {
+      /* top pyramid */
+      indices_[kTopIdx].push_back(0);
+      indices_[kTopIdx].push_back(i + offset);
+
+      /* top horizonal circle */
+      indices_[kSidIdx].push_back(i + offset);
+
+      /* bottom pyramid */
+      indices_[kBtmIdx].push_back(1);
+      indices_[kBtmIdx].push_back(i + offset + (sectors + 1));
+    }
+
+    for (size_t i = 0; i < sectors + 1; i++) {
+      indices_[kSidIdx].push_back(i + offset);
+      indices_[kSidIdx].push_back(i + offset + (sectors + 1));
+    }
+
+    for (size_t i = 0; i < sectors + 1; i++) {
+      indices_[kSidIdx].push_back(i + offset + (sectors + 1));
+    }
+
+    BuildObject((int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+  }
+};
+
 class SolidCylinder : public TriPartedObject {
 private:
   GLfloat radius;
@@ -1330,7 +1375,8 @@ int main()
   //sphere obj(0.5, 20, 20);
   //SolidSphere obj(0.5, 20, 3);
   //WiredSphere obj(0.5, 20, 10);
-  SolidCylinder obj(0.5, 1.0, 20);
+  //SolidCylinder obj(0.5, 1.0, 20);
+  WiredCylinder obj(0.5, 1.0, 20);
   //cylinder obj(0.5, 1.0, 20);
 
   GLfloat veloc = 0.05;
