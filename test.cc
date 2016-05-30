@@ -317,6 +317,28 @@ void multiplyMatrix(const GLfloat *m0, const GLfloat *m1, GLfloat *matrix)
   }
 }
 
+class Coordinates {
+  using namespace Eigen;
+
+  Vector3d pos;
+  Matrix3d rot;
+
+  Coordinates (
+    Vector3d position = Vector3d(0.0,0.0,0.0))
+    : pos(position) {
+    rot << Matrix3d::Unit();
+  };
+};
+
+class CasCoords {
+  Coordinates lcoords; /* local coordinates */
+  Coordinates wcoords; /* world coordinates */
+
+  std::list<Coordinates&> nodes;
+
+  void AddChild (CasCoords &
+};
+
 static GLfloat projectionMatrix[16];
 static GLfloat transformMatrix[16] = {
   1.0, 0.00, 0.00, 0.0,
