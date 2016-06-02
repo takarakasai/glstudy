@@ -13,6 +13,8 @@
 #include <list>
 #include <string>
 
+#include "dp_type.h"
+
 GLuint createProgram (const char *vsrc, const std::list<std::string> attrs, const char *fsrc, const char *fc);
 
 static GLfloat aspect_ratio = 0;
@@ -317,28 +319,6 @@ void multiplyMatrix(const GLfloat *m0, const GLfloat *m1, GLfloat *matrix)
   }
 }
 
-class Coordinates {
-  using namespace Eigen;
-
-  Vector3d pos;
-  Matrix3d rot;
-
-  Coordinates (
-    Vector3d position = Vector3d(0.0,0.0,0.0))
-    : pos(position) {
-    rot << Matrix3d::Unit();
-  };
-};
-
-class CasCoords {
-  Coordinates lcoords; /* local coordinates */
-  Coordinates wcoords; /* world coordinates */
-
-  std::list<Coordinates&> nodes;
-
-  void AddChild (CasCoords &
-};
-
 static GLfloat projectionMatrix[16];
 static GLfloat transformMatrix[16] = {
   1.0, 0.00, 0.00, 0.0,
@@ -362,11 +342,9 @@ typedef struct s_Object {
 
 typedef int32_t errno_t;
 
-#include <eigen3/Eigen/Core>
 #include <vector>
 #include <memory>
-
-#define PI 3.1415
+#include <eigen3/Eigen/Core>
 
 class vbo {
 private:
@@ -589,7 +567,7 @@ public:
     return 0;
   }
 
-  errno_t draw() {
+  errno_t Draw() {
     if (objs.size() == 0) {
       printf("ERROR 0-------------------\n");
       return EINVAL;
@@ -638,9 +616,9 @@ public:
     return *(objs[idx].get());
   }
 
-  errno_t draw() {
+  errno_t Draw() {
     for (auto obj : objs) {
-      obj->draw();
+      obj->Draw();
     }
 
     return 0;
@@ -655,9 +633,9 @@ std::vector<Eigen::Vector2f> circle_tbl (size_t slices) {
   
   vecs.push_back(Eigen::Vector2f(1.0, 0));
   for (size_t i = 1; i < slices; i++) {
-    GLfloat rad = 2 * PI * (GLfloat)i / slices;
+    GLfloat rad = 2 * Dp::Math::PI * (GLfloat)i / slices;
     vecs.push_back(Eigen::Vector2f(cos(rad), sin(rad)));
-    printf("%lf %lf %lf\n", cos(rad), sin(rad), rad);
+    //printf("%lf %lf %lf\n", cos(rad), sin(rad), rad);
   }
   vecs.push_back(Eigen::Vector2f(1.0, 0));
 
@@ -673,30 +651,45 @@ typedef struct sVertices {
     norms.push_back(pos / pos.norm());
   }
 
+  void push (Eigen::Vector3f pos, Eigen::Vector3f norm) {
+    poses.push_back(pos);
+    norms.push_back(norm);
+  }
+
   size_t size () {
     return poses.size();
   }
+
+  void rotate (Eigen::Matrix3f rot) {
+    for (auto &pose: poses) {
+      pose = rot * pose;
+    }
+    for (auto &norm: norms) {
+      norm = rot * norm;
+    }
+  }
+
 } Vertices;
 
-Vertices cylinderVertices (GLfloat radius, GLfloat height, size_t sectors) {
+Vertices cylinderVertices (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors) {
   Vertices verts;
 
   const GLfloat r = radius;
   auto circle  = circle_tbl(sectors);
 
-  verts.push(Eigen::Vector3f(0, 0, +height/2.0));
-  verts.push(Eigen::Vector3f(0, 0, -height/2.0));
+  verts.push((Eigen::Vector3f(0, 0, +height/2.0) + pos));
+  verts.push((Eigen::Vector3f(0, 0, -height/2.0) + pos));
 
   for (auto vec : circle) {
     auto rvec = r * vec;
     Eigen::Vector3f pvec(rvec(0), rvec(1), +height/2.0);
-    verts.push(pvec);
+    verts.push(pvec + pos);
   }
 
   for (auto vec : circle) {
     auto rvec = r * vec;
     Eigen::Vector3f pvec(rvec(0), rvec(1), -height/2.0);
-    verts.push(pvec);
+    verts.push(pvec + pos);
   }
 
   return verts;
@@ -711,7 +704,7 @@ Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh) {
   verts.push(Eigen::Vector3f(0, 0, +r));
 
   for (size_t i = 1; i < noh; i++) {
-    auto rad = PI * i / noh;
+    auto rad = Dp::Math::PI * i / noh;
     auto h   = r * cos(rad);
     auto rv  = r * sin(rad);
 
@@ -726,21 +719,327 @@ Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh) {
   return verts;
 }
 
-class TriPartedObject : public vaos {
+Vertices coneVertices (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors) {
+  Vertices verts;
+
+  const GLfloat r = radius;
+  auto circle  = circle_tbl(sectors);
+
+  verts.push(Eigen::Vector3f(0, 0, +height) + pos);
+
+  for (auto vec : circle) {
+    auto rvec = r * vec;
+    Eigen::Vector3f pvec(rvec(0), rvec(1), 0.0);
+    verts.push(pvec + pos);
+  }
+
+  verts.push(Eigen::Vector3f(0, 0, 0) + pos);
+
+  return verts;
+}
+
+Vertices rectangularVertices (Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height) {
+  Vertices verts;
+
+  auto lx = width  / 2.0;
+  auto ly = length / 2.0;
+  auto lz = height / 2.0;
+
+  verts.push(Eigen::Vector3f(-lx, -ly, -lz) + pos);
+  verts.push(Eigen::Vector3f(-lx, -ly, +lz) + pos);
+  verts.push(Eigen::Vector3f(-lx, +ly, -lz) + pos);
+  verts.push(Eigen::Vector3f(-lx, +ly, +lz) + pos);
+  verts.push(Eigen::Vector3f(+lx, -ly, -lz) + pos);
+  verts.push(Eigen::Vector3f(+lx, -ly, +lz) + pos);
+  verts.push(Eigen::Vector3f(+lx, +ly, -lz) + pos);
+  verts.push(Eigen::Vector3f(+lx, +ly, +lz) + pos);
+
+  return verts;
+}
+
+#define ECALL(function)     \
+  do {                      \
+    errno_t eno = function; \
+    if (eno != 0) {         \
+      return eno;           \
+    }                       \
+  } while(0)
+
+// interface
+class InterfaceSceneObject {
+private:
+public:
+  virtual errno_t Draw(Eigen::Matrix3d& rot, Eigen::Vector3d& pos) = 0;
+  virtual errno_t SetTransformMatrixLocId (GLint id) = 0;
+  //errno_t Draw(Eigen::Matrix3d& rot, Eigen::Vector3d& pos) {return 0;};
+  //errno_t SetTransformMatrixLocId (GLint id) {return 0;};
+
+  /* TODO */
+  virtual errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) = 0;
+  virtual errno_t SetScale(Dp::Math::real scale) = 0;
+
+  //InterfaceSceneObject() {};
+  virtual ~InterfaceSceneObject() {};
+};
+
+//#include <eigen3/Eigen/Geometry>
+#include "dp_type.h"
+
+class SceneObject : public vaos, public/*implement*/ InterfaceSceneObject {
+private:
+  GLint gl_tmat_loc_id_;
+  
+  /* TODO integ constructor's rot/pos */
+  Eigen::Matrix3d rot_;
+  Eigen::Vector3d pos_;
+  Dp::Math::real scale_;
+
+public:
+  SceneObject(size_t nov) : vaos(nov), rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero()), scale_(1.0) {
+    gl_tmat_loc_id_ = 0;
+  };
+
+  virtual ~SceneObject() {};
+
+  errno_t SetTransformMatrixLocId (GLint id) {
+    if (gl_tmat_loc_id_ == -1) {
+      return EINVAL;
+    }
+
+    gl_tmat_loc_id_ = id;
+
+    return 0;
+  }
+
+  errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
+    rot_ = rot;
+    pos_ = pos;
+  }
+
+  errno_t SetScale(Dp::Math::real scale) {
+    scale_ = scale;
+  }
+
+  errno_t Draw(Eigen::Matrix3d& Rot, Eigen::Vector3d& Pos) {
+    if (gl_tmat_loc_id_ == -1) {
+      fprintf(stderr, "ERROR %s (%d)\n", __PRETTY_FUNCTION__, gl_tmat_loc_id_);
+      return -1;
+    }
+
+    /* TODO: why rot_ * Rot is NG? */
+    Eigen::Matrix3d rot = Rot * (rot_ * scale_);
+    //Eigen::Matrix3d rot = rot_ * Rot;
+    Eigen::Vector3d pos = Pos + Rot * pos_;
+
+    //GLfloat transformMatrix[16] = {
+    //  (float)rot(0,0), (float)rot(0,1), (float)rot(0,2), 0.0,
+    //  (float)rot(1,0), (float)rot(1,1), (float)rot(1,2), 0.0,
+    //  (float)rot(2,0), (float)rot(2,1), (float)rot(2,2), 0.0,
+    //  (float)pos(0),   (float)pos(1)  , (float)pos(2),   1.0
+    //};
+    GLfloat transformMatrix[16] = {
+      (float)rot(0,0), (float)rot(1,0), (float)rot(2,0), 0.0,
+      (float)rot(0,1), (float)rot(1,1), (float)rot(2,1), 0.0,
+      (float)rot(0,2), (float)rot(1,2), (float)rot(2,2), 0.0,
+      (float)pos(0),   (float)pos(1)  , (float)pos(2),   1.0
+    };
+ 
+    //  1.0, 0.00, 0.00, 0.0,
+    //  0.0, 0.71,-0.71, 0.0,
+    //  0.0, 0.71, 0.71, 0.0,
+    //  0.0, 0.00, 1.00, 1.0
+    //};
+
+
+
+//    for (size_t i = 0; i < 4; i++) {
+//      printf("%+7.2f %+7.2f %+7.2f %+7.2f\n", transformMatrix[i*4], transformMatrix[i*4+1], transformMatrix[i*4+2], transformMatrix[i*4+3]);
+//    }
+
+    //  1.0, 0.00, 0.00, 0.0,
+    //  0.0, 0.71,-0.71, 0.0,
+    //  0.0, 0.71, 0.71, 0.0,
+    //  0.0, 0.00, 0.00, 1.0
+    //};
+
+    glUniformMatrix4fv(gl_tmat_loc_id_, 1, GL_FALSE, transformMatrix);
+
+    ECALL(vaos::Draw());
+  }
+};
+
+class UniPartedObject : public SceneObject {
+private:
+
+protected:
+  Vertices vertices_;
+
+  std::vector<GLuint> indices_;
+
+public:
+
+  /* before using BuildObject, you should prepare vertices_. */
+  void BuildObject (const int draw_mode = GL_TRIANGLE_STRIP) {
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    vert->setdata(vertices_.poses);
+    norm->setdata(vertices_.norms);
+
+    auto idx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+    idx->setdata(indices_);
+
+    vaos::operator[](0).setup(draw_mode, idx->size());
+    vaos::operator[](0).setvbo(0, idx, vert);
+    vaos::operator[](0).setvbo(1, norm);
+  };
+
+  UniPartedObject() : SceneObject(1) {};
+  virtual ~UniPartedObject() {};
+};
+
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+
+#include <iostream>
+#include <fstream>
+#include <unordered_map>
+#include <functional>
+
+namespace ssg {
+  class UniMesh : public UniPartedObject {
+  private:
+  
+  public:
+    UniMesh (const Eigen::Matrix3f &rot, const aiMesh* paiMesh) {
+      /* make vertices */
+      const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+      for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
+        const aiVector3D* pPos      = &(paiMesh->mVertices[i]);
+        const aiVector3D* pNormal   = &(paiMesh->mNormals[i]);
+        const aiVector3D* pTexCoord = paiMesh->HasTextureCoords(0) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
+ 
+        vertices_.push(Eigen::Vector3f(pPos->x, pPos->y, pPos->z),
+                   Eigen::Vector3f(pNormal->x, pNormal->y, pNormal->z));
+        //printf("%+7.2lf, %+7.2lf, %+7.2lf : %+7.2lf, %+7.2lf || %+7.2lf, %+7.2lf, %+7.2lf -- %s\n",
+        //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
+        //  paiMesh->HasTextureCoords(0) ? "True" : "False");
+      }
+      vertices_.rotate(rot);
+  
+      /* make indices */
+      for (unsigned int i = 0 ; i < paiMesh->mNumFaces ; i++) {
+        const aiFace& Face = paiMesh->mFaces[i];
+        assert(Face.mNumIndices == 3);
+        //printf("%d, %d, %d\n", Face.mIndices[0], Face.mIndices[1], Face.mIndices[2]);
+  
+        indices_.push_back(Face.mIndices[0]);
+        indices_.push_back(Face.mIndices[1]);
+        indices_.push_back(Face.mIndices[2]);
+      }
+  
+      BuildObject();
+    }
+
+    UniMesh (const aiMesh* paiMesh) :UniMesh(Eigen::Matrix3f::Identity(), paiMesh){}
+  };
+
+  std::shared_ptr<SceneObject> ImportObject (std::string file_name) {
+    Assimp::Importer Importer;
+  
+    const aiScene* pScene = 
+      Importer.ReadFile(file_name.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+    // aiProcess_FlipUVs
+  
+    if (pScene == NULL) {
+      printf("Error parsing '%s': '%s'\n", file_name.c_str(), Importer.GetErrorString());
+      return NULL;
+    }
+
+    printf(" mesh size : %u\n", pScene->mNumMeshes);
+    printf(" mate size : %u\n", pScene->mNumMaterials);
+
+    if (pScene->mNumMeshes == 1) {
+      printf("NumMeshes == 1 ==> UniMesh\n");
+      return std::make_shared<UniMesh>(pScene->mMeshes[0]);
+    }
+
+    printf("NumMeshes > 1 not supported\n");
+    return NULL;
+  }
+
+  void test() {
+    Assimp::Importer Importer;
+  
+    std::string Filename = "./test.stl";
+    printf("------------ %s\n", Filename.c_str());
+  
+    const aiScene* pScene = 
+      Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+    // aiProcess_FlipUVs
+  
+    DPRINTF("result '%s': '%s'\n", Filename.c_str(), Importer.GetErrorString());
+    if (pScene) {
+      //Ret = InitFromScene(pScene, Filename);
+      printf("result '%s': \n", Filename.c_str());
+    }
+    else {
+      printf("Error parsing '%s': '%s'\n", Filename.c_str(), Importer.GetErrorString());
+      return;
+    }
+  
+    printf(" mesh size : %u\n", pScene->mNumMeshes);
+    printf(" mate size : %u\n", pScene->mNumMaterials);
+  
+    const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+   
+    for (unsigned int i = 0 ; i < pScene->mNumMeshes ; i++) {
+      const aiMesh* paiMesh = pScene->mMeshes[i];
+      //InitMesh(i, paiMesh);
+  
+      for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
+        const aiVector3D* pPos      = &(paiMesh->mVertices[i]);
+        const aiVector3D* pNormal   = &(paiMesh->mNormals[i]);
+        const aiVector3D* pTexCoord = paiMesh->HasTextureCoords(0) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
+  
+        printf("%+7.2lf, %+7.2lf, %+7.2lf : %+7.2lf, %+7.2lf || %+7.2lf, %+7.2lf, %+7.2lf\n",
+          pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z);
+        //Vertex v(Vector3f(pPos->x, pPos->y, pPos->z),
+        //         Vector2f(pTexCoord->x, pTexCoord->y),
+        //         Vector3f(pNormal->x, pNormal->y, pNormal->z));
+        //
+        //Vertices.push_back(v);
+      }
+  
+      for (unsigned int i = 0 ; i < paiMesh->mNumFaces ; i++) {
+        const aiFace& Face = paiMesh->mFaces[i];
+        assert(Face.mNumIndices == 3);
+        printf("%d, %d, %d\n", Face.mIndices[0], Face.mIndices[1], Face.mIndices[2]);
+        //Indices.push_back(Face.mIndices[0]);
+        //Indices.push_back(Face.mIndices[1]);
+        //Indices.push_back(Face.mIndices[2]);
+      }
+    }
+  
+    //return InitMaterials(pScene, Filename);
+  }
+}
+
+class BiPartedObject : public SceneObject {
 private:
 
 protected:
   Vertices vertices_;
 
   static const size_t kTopIdx = 0;
-  static const size_t kSidIdx = 1;
-  static const size_t kBtmIdx = 2;
-  static const size_t kNofIdx = 3;
+  static const size_t kBtmIdx = 1;
+  static const size_t kNofIdx = 2;
   std::vector<GLuint> indices_[kNofIdx];
 
 public:
 
-  void BuildObject (int draw_mode[3] = (int[3]){GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN}) {
+  /* before using BuildObject, you should prepare vertices_. */
+  void BuildObject (const int draw_mode[kNofIdx] = (int[kNofIdx]){GL_TRIANGLE_FAN, GL_TRIANGLE_FAN}) {
 
     auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
     auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
@@ -762,9 +1061,164 @@ public:
     }
   };
 
-  TriPartedObject() : vaos(3) {};
+  BiPartedObject() : SceneObject(kNofIdx) {};
+  virtual ~BiPartedObject() {};
+};
+
+class TriPartedObject : public SceneObject {
+private:
+
+protected:
+  Vertices vertices_;
+
+  static const size_t kTopIdx = 0;
+  static const size_t kSidIdx = 1;
+  static const size_t kBtmIdx = 2;
+  static const size_t kNofIdx = 3;
+  std::vector<GLuint> indices_[kNofIdx];
+
+public:
+
+  /* before using BuildObject, you should prepare vertices_. */
+  void BuildObject (const int draw_mode[3] = (int[3]){GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN}) {
+
+    auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+    vert->setdata(vertices_.poses);
+    norm->setdata(vertices_.norms);
+
+    std::shared_ptr<vbo> vbo_indices[kNofIdx];
+
+    size_t i = 0;
+    for (auto idx : vbo_indices) {
+      idx = std::make_shared<vbo>(GL_ELEMENT_ARRAY_BUFFER);
+
+      idx->setdata(indices_[i]);
+      vaos::operator[](i).setup(draw_mode[i], idx->size());
+      vaos::operator[](i).setvbo(0, idx, vert);
+      vaos::operator[](i).setvbo(1, norm);
+
+      i++;
+    }
+  };
+
+  TriPartedObject() : SceneObject(3) {};
   virtual ~TriPartedObject() {};
 };
+
+class WiredRectangular : public UniPartedObject {
+private:
+  //Vector3f center_;
+  GLfloat width_;
+  GLfloat length_;
+  GLfloat height_;
+
+public:
+  WiredRectangular (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+    : width_(width), length_(length), height_(height) {
+
+    /* make vertices */
+    vertices_ = rectangularVertices(pos, width_, length_, height_);
+
+    vertices_.rotate(rot);
+
+    indices_.push_back(0); indices_.push_back(1);
+    indices_.push_back(0); indices_.push_back(2);
+    indices_.push_back(0); indices_.push_back(4);
+
+    indices_.push_back(3); indices_.push_back(1);
+    indices_.push_back(3); indices_.push_back(2);
+    indices_.push_back(3); indices_.push_back(7);
+
+    indices_.push_back(5); indices_.push_back(1);
+    indices_.push_back(5); indices_.push_back(4);
+    indices_.push_back(5); indices_.push_back(7);
+
+    indices_.push_back(6); indices_.push_back(2);
+    indices_.push_back(6); indices_.push_back(4);
+    indices_.push_back(6); indices_.push_back(7);
+
+    BuildObject((const int){GL_LINES});
+  }
+  WiredRectangular (Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+    : WiredRectangular(Eigen::Matrix3f::Identity(), pos, width, length, height) {
+  }
+};
+
+class WiredCone : public TriPartedObject {
+private:
+  GLfloat radius_;
+  GLfloat height_;
+  GLint nop_;
+
+public:
+  WiredCone (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : radius_(radius), height_(height), nop_(nop) {
+
+    /* make vertices */
+    vertices_ = coneVertices(pos, radius_, height_, nop_);
+
+    vertices_.rotate(rot);
+
+    const size_t offset = 1;
+
+    /* make indices */
+    for (size_t i = 0; i < nop + 1; i++) {
+      /* top pyramid */
+      indices_[kTopIdx].push_back(0);
+      indices_[kTopIdx].push_back(i + offset);
+     
+      /* bottom circle */
+      indices_[kSidIdx].push_back(i + offset);
+
+      /* bottom pyramid */
+      indices_[kBtmIdx].push_back(vertices_.size() - 1);
+      indices_[kBtmIdx].push_back(i + offset);
+    }
+
+    BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+  }
+  WiredCone (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : WiredCone(Eigen::Matrix3f::Identity(), pos, radius, height, nop) {
+  }
+};
+
+class SolidCone : public BiPartedObject {
+private:
+  GLfloat radius_;
+  GLfloat height_;
+  GLint nop_;
+
+public:
+  SolidCone (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : radius_(radius), height_(height), nop_(nop) {
+
+    /* make vertices */
+    vertices_ = coneVertices(pos, radius_, height_, nop_);
+
+    vertices_.rotate(rot);
+
+    const size_t offset = 1;
+
+    indices_[kTopIdx].push_back(0);
+    indices_[kBtmIdx].push_back(vertices_.size() - 1);
+
+    /* make indices */
+    for (size_t i = 0; i < nop + 1; i++) {
+      /* top pyramid */
+      indices_[kTopIdx].push_back(i + offset);
+
+      /* bottom pyramid */
+      indices_[kBtmIdx].push_back(i + offset);
+    }
+
+    BuildObject();
+  }
+  SolidCone (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : SolidCone(Eigen::Matrix3f::Identity(), pos, radius, height, nop) {
+  }
+};
+
 
 class WiredSphere : public TriPartedObject {
 private:
@@ -806,7 +1260,7 @@ public:
       }
     }
 
-    BuildObject((int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+    BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
   }
 };
 
@@ -911,11 +1365,22 @@ private:
 
 public:
 
-  WiredCylinder (GLfloat radius, GLfloat height, size_t sectors)
+  WiredCylinder (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+  //WiredCylinder (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors) 
     : radius(radius), height(height), sectors(sectors) {
 
+    std::cout << "ROT:" << std::endl;
+    std::cout << rot << std::endl;
+    std::cout << "POS:" << std::endl;
+    std::cout << pos << std::endl;
+    std::cout << "R:" << radius << "," << "height:" << height << "," << sectors << std::endl ;
+
     /* make vertices */
-    vertices_ = cylinderVertices(radius, height, sectors);
+    vertices_ = cylinderVertices(pos, radius, height, sectors);
+   
+    //Eigen::Matrix3f rot = Eigen::Matrix3f::Identity();
+    //Eigen::Matrix3f rot;
+    vertices_.rotate(rot);
 
     /* make indices */
     const size_t num_of_slices = (vertices_.size() - 2) / 2;
@@ -944,7 +1409,11 @@ public:
       indices_[kSidIdx].push_back(i + offset + (sectors + 1));
     }
 
-    BuildObject((int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+    BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+  }
+
+  WiredCylinder (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+   : WiredCylinder(Eigen::Matrix3f::Identity(), pos, radius, height, sectors) {
   }
 };
 
@@ -960,7 +1429,7 @@ public:
     : radius(radius), height(height), sectors(sectors) {
 
     /* make vertices */
-    vertices_ = cylinderVertices(radius, height, sectors);
+    vertices_ = cylinderVertices((Eigen::Vector3f){0.0, 0.0, 0.0}, radius, height, sectors);
 
     /* make indices */
     const size_t num_of_slices = (vertices_.size() - 2) / 2;
@@ -990,7 +1459,7 @@ public:
   cylinder (GLfloat radius, GLfloat height, size_t sectors)
     : radius(radius), height(height), sectors(sectors), vaos(3) {
 
-    Vertices verts = cylinderVertices(radius, height, sectors);
+    Vertices verts = cylinderVertices((Eigen::Vector3f){0.0, 0.0, 0.0}, radius, height, sectors);
 
     auto vert = std::make_shared<vbo>(GL_ARRAY_BUFFER);
     auto norm = std::make_shared<vbo>(GL_ARRAY_BUFFER);
@@ -1150,9 +1619,9 @@ public:
     top_vertices.push_back(Eigen::Vector3f(0.0, 0.0, +r));
     btm_vertices.push_back(Eigen::Vector3f(0.0, 0.0, -r));
     for (size_t i = 1; i < pn_r + 2; i++) {
-      GLfloat rad = PI * 1 / pn_h;
+      GLfloat rad = Dp::Math::PI * 1 / pn_h;
       GLfloat r_h   = r * sin(rad);
-      GLfloat rad_h = 2 * PI * i / pn_r;
+      GLfloat rad_h = 2 * Dp::Math::PI * i / pn_r;
 
       top_vertices.push_back(Eigen::Vector3f(
                   r_h * cos(rad_h),
@@ -1165,14 +1634,14 @@ public:
     }
 
     for (size_t i = 1; i < pn_h - 1; i++) {
-      GLfloat rad_v1 = PI * (i  ) / pn_h;
-      GLfloat rad_v2 = PI * (i+1) / pn_h;
+      GLfloat rad_v1 = Dp::Math::PI * (i  ) / pn_h;
+      GLfloat rad_v2 = Dp::Math::PI * (i+1) / pn_h;
       GLfloat r_h1   = r * sin(rad_v1);
       GLfloat r_h2   = r * sin(rad_v2);
       GLfloat r_v1   = r * cos(rad_v1);
       GLfloat r_v2   = r * cos(rad_v2);
       for (size_t i = 0; i < pn_r + 1; i++) {
-        GLfloat rad_h = 2 * PI * i / pn_r;
+        GLfloat rad_h = 2 * Dp::Math::PI * i / pn_r;
         mid_vertices.push_back(Eigen::Vector3f(r_h2 * cos(rad_h), r_h2 * sin(rad_h), r_v2));
         mid_vertices.push_back(Eigen::Vector3f(r_h1 * cos(rad_h), r_h1 * sin(rad_h), r_v1));
       }
@@ -1224,16 +1693,16 @@ public:
     std::vector<Eigen::Vector3f> vertices;
     vertices.push_back(Eigen::Vector3f(0.0, 0.0, r));
     for (size_t i = 1; i < pn_r + 2; i++) {
-      GLfloat rad = PI * 1 / pn_h;
+      GLfloat rad = Dp::Math::PI * 1 / pn_h;
       GLfloat r_h   = r * sin(rad);
-      GLfloat rad_h = 2 * PI * i / pn_r;
+      GLfloat rad_h = 2 * Dp::Math::PI * i / pn_r;
 
       vertices.push_back(Eigen::Vector3f(
                   r_h * cos(rad_h),
                   r_h * sin(rad_h),
                   r   * cos(rad)));
 
-      printf("%d %lf %lf %lf\n", (int)i, vertices[i][0], vertices[i][1], vertices[i][2]);
+      //printf("%d %lf %lf %lf\n", (int)i, vertices[i][0], vertices[i][1], vertices[i][2]);
     }
 
     //vbo obj;
@@ -1249,6 +1718,767 @@ public:
 
 };
 
+#include "CasCoords.h"
+
+#include <eigen3/Eigen/Geometry>
+
+namespace Eigen {
+  typedef Matrix< double, 6, 1 >  Vector6d;
+  typedef Matrix< double, 6, 6 >  Matrix6d;
+}
+
+class Actuator {
+private:
+  Dp::Math::real& value_;
+  Dp::Math::real& veloc_;
+  Dp::Math::real& accel_;
+  Dp::Math::real& acfrc_; /* actuational force */
+
+  Dp::Math::real& exfrc_; /* external force */
+
+public:
+  Actuator(Dp::Math::real& value,
+           Dp::Math::real& veloc,
+           Dp::Math::real& accel,
+           Dp::Math::real& acfrc,
+           Dp::Math::real& exfrc
+          ) : value_(value), veloc_(veloc), accel_(accel),
+              acfrc_(acfrc), exfrc_(exfrc) {};
+  virtual ~Actuator() {};
+
+  inline const Dp::Math::real& GetValue()    { return value_;};
+  inline const Dp::Math::real& GetVeloc()    { return veloc_;};
+  inline const Dp::Math::real& GetAccel()    { return accel_;};
+  inline const Dp::Math::real& GetActForce() { return acfrc_;};
+  inline const Dp::Math::real& GetExtForce() { return exfrc_;};
+
+  inline void SetValue(Dp::Math::real& value)    { value_ = value;};
+  inline void SetVeloc(Dp::Math::real& veloc)    { veloc_ = veloc;};
+  inline void SetAccel(Dp::Math::real& accel)    { accel_ = accel;};
+  inline void SetActForce(Dp::Math::real& force) { acfrc_ = force;};
+};
+
+#include <iostream>
+
+//class Joint : public CasCoords {
+class Joint {
+private:
+  //const char* name_;
+  std::string name_;
+
+protected:
+  std::list<std::shared_ptr<Actuator>> actuators_;
+
+  /* configuration */
+  Eigen::Vector6d inertia_;
+  Eigen::Vector6d viscosity_;
+  Eigen::Vector6d min_val_;
+  Eigen::Vector6d max_val_;
+
+  Eigen::Vector6d val_;
+  Eigen::Vector6d vel_;
+  Eigen::Vector6d acc_;
+  Eigen::Vector6d efrc_; /* external torque */
+
+  Eigen::Vector6d afrc_; /* actuation torque */
+
+  /* temporary rot/pos */
+  Eigen::Matrix3d rot_;
+  Eigen::Vector3d pos_;
+
+public:
+  Joint(const char* name) : name_(name) {
+    rot_ = Eigen::Matrix3d::Identity();
+    pos_ = Eigen::Vector3d::Zero();
+  };
+  virtual ~Joint() {};
+
+  void SetInertia(size_t idx, Dp::Math::real val) {
+    inertia_(idx) = val;
+  }
+
+  void SetViscosity(size_t idx, Dp::Math::real val) {
+    viscosity_(idx) = val;
+  }
+
+  void SetRange(size_t idx, Dp::Math::real min, Dp::Math::real max) {
+    min_val_(idx) = min;
+    max_val_(idx) = max;
+  }
+
+  //virtual errno_t ApplyLocalCoords() = 0;
+
+  size_t GetNumOfActuators() {
+    return actuators_.size();
+  }
+
+  std::list<std::shared_ptr<Actuator>>& Actuators() {
+    return actuators_;
+  }
+
+  virtual Eigen::Matrix3d& Rot() {
+    return rot_;
+  }
+
+  virtual Eigen::Vector3d& Pos() {
+    return pos_;
+  }
+
+  const Eigen::Vector6d& GetValue() { return val_;};
+  const Eigen::Vector6d& GetVeloc() { return vel_;};
+  const Eigen::Vector6d& GetAccel() { return acc_;};
+  const Eigen::Vector6d& GetExtFrc() { return efrc_;};
+  const Eigen::Vector6d& GetActFrc() { return afrc_;};
+
+  void SetValue (Eigen::Vector6d& value) {val_ = value;};
+  void SetVeloc (Eigen::Vector6d& veloc) {vel_ = veloc;};
+  void SetAccel (Eigen::Vector6d& accel) {acc_ = accel;};
+  void SetExtFrc (Eigen::Vector6d& extfrc) {efrc_ = extfrc;};
+  void SetActFrc (Eigen::Vector6d& actfrc) {afrc_ = actfrc;};
+
+  // TODO:
+  void SetValue (Dp::Math::real value) {val_(0) = value;};
+
+  std::string& GetName() { return name_;};
+};
+
+class RotaryJoint : public Joint {
+private:
+  Eigen::Vector3d axis_;
+  Dp::Math::real& angle_;
+
+public:
+  RotaryJoint(const char* name, Eigen::Vector3d axis) :
+    Joint(name),
+    axis_(axis), 
+    angle_(Joint::val_(0))
+  {
+    actuators_.push_back(
+      std::make_shared<Actuator>(val_(0), vel_(0), acc_(0), efrc_(0), afrc_(0))
+    );
+  };
+
+  virtual ~RotaryJoint() {};
+
+  static std::shared_ptr<RotaryJoint> Create (const char* name, Eigen::Vector3d axis) {
+    return std::make_shared<RotaryJoint>(name, axis);
+  }
+
+  Eigen::Matrix3d& Rot() {
+    rot_ = Eigen::AngleAxisd(angle_, axis_);
+    return rot_;
+  }
+
+  //errno_t ApplyLocalCoords() {
+  //  CasCoords::LRot() = rot();
+  //  return 0;
+  //}
+
+  errno_t SetAngle (Dp::Math::real angle) {
+    angle_ = angle;
+    return 0; 
+  }
+};
+
+using namespace std;
+using namespace Eigen;
+using namespace Dp::Math;
+
+class Link : public CasCoords {
+private:
+  //const char* name_;
+  std::string name_;
+
+  std::shared_ptr<Joint> joint_;
+  std::list<std::shared_ptr<Link>> clinks_;
+
+  Eigen::Vector3d l_tippos_;
+  Eigen::Matrix3d l_tiprot_;
+  Dp::Math::real     mass_;
+  Eigen::Vector3d centroid_; /* center of gravity */
+  Eigen::Matrix3d cinertia_; /* inertia tensor at centroid */
+
+  std::shared_ptr<Joint>& getJoint() {
+    return joint_;
+  }
+
+public:
+  //Link(const char* name) : name_(name) {};
+  //Link(const char* name, std::shared_ptr<Joint> joint) : name_(name), joint_(joint) {};
+  Link(
+    const char* name, shared_ptr<Joint> joint, Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+    Matrix3d cinertia) :
+    name_(name), joint_(joint), l_tippos_(lpos), l_tiprot_(Matrix3d::Identity()), mass_(mass), centroid_(centroid),
+    cinertia_(cinertia) {};
+    //cinertia_(Matrix3d::Identity()) {};
+  virtual ~Link() {};
+
+  void SetMass(Dp::Math::real mass) {
+    mass_ = mass;
+  }
+
+  void SetCentroid(Vector3d centroid) {
+    centroid_ = centroid;
+  }
+
+  void SetInertia(Matrix3d inertia) {
+    cinertia_ = inertia;
+  }
+
+  static std::shared_ptr<Link> Create (
+    const char* name, shared_ptr<Joint> joint, Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+    Matrix3d cinertia) {
+    return std::make_shared<Link>(name, joint, lpos, mass, centroid, cinertia);
+  }
+
+  //std::shared_ptr<Joint> GetJoint() {
+  //  return joint_;
+  //}
+  Joint& GetJoint() {
+    return *(joint_);
+  }
+
+  std::shared_ptr<Joint> FindJoint(std::string& str) {
+    /* TODO: duplicate */
+    if (joint_->GetName() == str) {
+      return joint_;
+    }
+    for (auto &link : clinks_) {
+      auto joint = link->FindJoint(str);
+      if (joint != NULL) {
+        return joint;
+      }
+    }
+    return NULL;
+  }
+  std::shared_ptr<Joint> FindJoint(const char* name) {
+    std::string tname = name;
+    return FindJoint(tname);
+  }
+
+  // TODO: --> CasCoords 
+  Eigen::Vector3d& LTipPos() {
+    return l_tippos_;
+  }
+  Eigen::Matrix3d& LTipRot() {
+    return l_tiprot_;
+  }
+
+  errno_t AssignJoint (std::shared_ptr<Joint> joint) {
+    joint_ = std::move(joint);
+  }
+
+  errno_t AddChild (std::shared_ptr<Link> clink) {
+    CasCoords::AddChild(clink);
+    clinks_.push_back(clink);
+  }
+
+  errno_t ApplyLocalCoords() {
+    //CasCoords::LRot() = joint_->Rot() * l_tiprot_;
+    CasCoords::LRot() = l_tiprot_ * joint_->Rot();
+    CasCoords::LPos() = joint_->Pos() + l_tippos_;
+    //std::cout << name_ << std::endl;
+    //std::cout << "  ROT:" << CasCoords::LRot() << std::endl;
+    //std::cout << "  POS:" << l_tippos_ << std::endl;
+    //std::cout << "  POS:" << CasCoords::LPos() << std::endl;
+    return 0;
+  }
+
+  errno_t UpdateLocals() {
+    ECALL(ApplyLocalCoords());
+    for (auto &link : clinks_) {
+      link->UpdateLocals();
+    }
+    return 0;
+  }
+
+  errno_t UpdateCasCoords() {
+    ECALL(UpdateLocals());      /* ローカル位置・姿勢更新 */
+    ECALL(CasCoords::Update()); /* ワールド位置・姿勢更新 */
+    return 0;
+  }
+
+  std::string& GetName() {
+    return name_;
+  }
+};
+
+
+
+/* ssg : Simple Scene Graph */
+namespace ssg {
+
+
+  class DrawableLink : public Link {
+  private:
+    //const char* name_;
+    //std::string name_;
+
+    //std::shared_ptr<InterfaceSceneObject> obj_ = NULL;
+    std::list<std::shared_ptr<InterfaceSceneObject>> objs_;
+  
+  public:
+  
+    DrawableLink(const char* name,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) :
+         Link(name, joint, lpos, mass, centroid, cinertia) {
+    };
+    DrawableLink(const char* name,
+         std::shared_ptr<InterfaceSceneObject> obj,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) :
+         Link(name, joint, lpos, mass, centroid, cinertia) {
+        objs_.push_back(obj);
+    };
+    DrawableLink(const char* name,
+         std::list<std::shared_ptr<InterfaceSceneObject>> objs,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) :
+         Link(name, joint, lpos, mass, centroid, cinertia) {
+        objs_ = objs;
+    };
+    virtual ~DrawableLink() {};
+
+    static std::shared_ptr<DrawableLink> Create(const char* name,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) {
+      return std::make_shared<DrawableLink>(name, joint, lpos, mass, centroid, cinertia);
+    }
+    static std::shared_ptr<DrawableLink> Create(const char* name,
+         std::shared_ptr<InterfaceSceneObject> obj,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) {
+      return std::make_shared<DrawableLink>(name, obj, joint, lpos, mass, centroid, cinertia);
+    }
+    static std::shared_ptr<DrawableLink> Create(const char* name,
+         std::list<std::shared_ptr<InterfaceSceneObject>> objs,
+         std::shared_ptr<Joint> joint,
+         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
+         Matrix3d cinertia) {
+      return std::make_shared<DrawableLink>(name, objs, joint, lpos, mass, centroid, cinertia);
+    }
+
+    void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
+      objs_.push_back(obj);
+    }
+
+    void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
+      objs_.splice(objs_.end(), objs);
+    }
+
+    void SetTransformMatrixLocId (GLint id) {
+      for (auto &obj: objs_) {
+        obj->SetTransformMatrixLocId(id);
+      }
+    }
+
+  public:
+    errno_t Exec(void) {
+      for (auto &obj : objs_) {
+        obj->Draw(CasCoords::WRot(), CasCoords::WPos());
+      }
+      return 0;
+    }
+  };
+}
+
+namespace ssg {
+  static const Eigen::Vector3d& parseRotaryAxis (std::string &axis_type) {
+      static const std::unordered_map<std::string, Eigen::Vector3d> cases = {
+        {"Base",        (Eigen::Vector3d){0.0,0.0,0.0}},
+        {"RotaryLinkX", (Eigen::Vector3d){1.0,0.0,0.0}},
+        {"RotaryLinkY", (Eigen::Vector3d){0.0,1.0,0.0}},
+        {"RotaryLinkZ", (Eigen::Vector3d){0.0,0.0,1.0}}
+      };
+      auto result = cases.find(axis_type);
+      return result != cases.end() ? result->second : cases.begin()->second ;
+  }
+
+  static errno_t parseLinkInfo (std::ifstream &ifs, Link &link) {
+      Dp::Math::real mass;
+      ifs >> mass;
+      link.SetMass(mass);
+
+      Vector3d centroid;
+      ifs >> centroid(0);
+      ifs >> centroid(1);
+      ifs >> centroid(2);
+      //centroid(0) << ifs;
+      //centroid(1) << ifs;
+      //centroid(2) << ifs;
+      link.SetCentroid(centroid);
+
+      Matrix3d inertia;
+      ifs >> inertia(0,0);
+      ifs >> inertia(1,1);
+      ifs >> inertia(2,2);
+      ifs >> inertia(1,0);
+      ifs >> inertia(2,1);
+      ifs >> inertia(2,0);
+      inertia(0,1) = inertia(1,0);
+      inertia(1,2) = inertia(2,1);
+      inertia(0,2) = inertia(2,0);
+      //inertia(0, 0) << ifs;
+      //inertia(1, 1) << ifs;
+      //inertia(2, 2) << ifs;
+      //inertia(0, 1) = inertia(1, 0) << ifs;
+      //inertia(1, 2) = inertia(2, 1) << ifs;
+      //inertia(0, 2) = inertia(2, 0) << ifs;
+      link.SetInertia(inertia);
+
+      std::cout << "mass\n";
+      std::cout << mass << std::endl;
+      std::cout << "centroid\n";
+      std::cout << centroid << std::endl;
+      std::cout << "inertia\n";
+      std::cout << inertia << std::endl;
+      std::cout << "---\n";
+
+      return 0;
+  }
+
+  static errno_t parseJointInertia (std::ifstream &ifs, Joint &joint) {
+      size_t idx;
+      Dp::Math::real val;
+      ifs >> idx;
+      ifs >> val;
+
+      joint.SetInertia(idx, val);
+      return 0;
+  }
+  static errno_t parseJointInertia (std::ifstream &ifs, Link &link) {
+      return parseJointInertia(ifs, link.GetJoint());
+  }
+
+  static errno_t parseJointViscosity (std::ifstream &ifs, Joint &joint) {
+      size_t idx;
+      Dp::Math::real val;
+      ifs >> idx;
+      ifs >> val;
+
+      joint.SetViscosity(idx, val);
+      return 0;
+  }
+  static errno_t parseJointViscosity (std::ifstream &ifs, Link &link) {
+      return parseJointViscosity(ifs, link.GetJoint());
+  }
+
+  static errno_t parseJointRange (std::ifstream &ifs, Joint &joint) {
+      size_t idx;
+      Dp::Math::real minval, maxval;
+      ifs >> idx;
+      ifs >> minval;
+      ifs >> maxval;
+
+      joint.SetRange(idx, minval, maxval);
+      return 0;
+  }
+  static errno_t parseJointRange (std::ifstream &ifs, Link &link) {
+      return parseJointRange(ifs, link.GetJoint());
+  }
+
+  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile (std::string &filepath);
+
+  static errno_t parseShape (std::ifstream &ifs, Link &link) {
+
+      std::string file;
+      ifs >> file;
+
+      /* TODO dynamic_cast to be removed */
+      auto shapes = ImportShapeFile(file);
+      dynamic_cast<DrawableLink&>(link).AddShape(shapes);
+
+      std::cout << "Shape : " << file << "\n";
+
+      return 0;
+  }
+
+  static errno_t parseHull (std::ifstream &ifs, Link &link) {
+
+      std::string file;
+      ifs >> file;
+
+      std::cout << "Hull not implemented : " << file << "\n";
+
+      return 0;
+  }
+
+  std::shared_ptr<DrawableLink> ImportLinkFile (std::string &filepath);
+
+  static errno_t parseChild (std::ifstream &ifs, Link &link) {
+
+      std::string file;
+      ifs >> file;
+
+      Eigen::Vector3d xyz, rpy;
+      ifs >> xyz(0);
+      ifs >> xyz(1);
+      ifs >> xyz(2);
+      ifs >> rpy(0);
+      ifs >> rpy(1);
+      ifs >> rpy(2);
+      
+      std::cout << "Child : " << file
+                << " xyz = " << xyz(0)  << "," << xyz(1) << "," << xyz(2)
+                << " rpy = " << rpy(0)  << "," << rpy(1) << "," << rpy(2) << "\n\n\n";
+
+      /* TODO: LTipRot, TipPos */
+      auto clink = ImportLinkFile(file);
+      clink->LTipPos() = xyz;
+      clink->LTipRot() = Dp::Math::rpy2mat3(rpy);
+      link.AddChild(clink);
+
+      return 0;
+  }
+
+  static errno_t parseLinkAttribute (std::string &attr_type, std::ifstream &ifs, Link &link) {
+      static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
+        {"Shape"         , [](std::ifstream &ifs, Link &link){return parseShape(ifs, link);         }},
+        {"Hull"          , [](std::ifstream &ifs, Link &link){return parseHull(ifs, link);          }},
+        {"Child"         , [](std::ifstream &ifs, Link &link){return parseChild(ifs, link);         }},
+        {"Inertia"       , [](std::ifstream &ifs, Link &link){return parseLinkInfo(ifs, link);      }},
+        {"JointInertia"  , [](std::ifstream &ifs, Link &link){return parseJointInertia(ifs, link);  }},
+        {"JointViscosity", [](std::ifstream &ifs, Link &link){return parseJointViscosity(ifs, link);}},
+        {"JointRange"    , [](std::ifstream &ifs, Link &link){return parseJointRange(ifs, link);    }}
+      };
+      //static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
+      //  {"JointInertia"  , parseJointInertia  },
+      //  {"JointViscosity", parseJointViscosity},
+      //  {"JointRange"    , parseJointRange    }
+      //};
+      auto result = cases.find(attr_type);
+      return result != cases.end() ? result->second(ifs, link) : EINVAL ;
+  }
+
+  //static Eigen::Matrix3d rpy2mat3 (Eigen::Vector3d rpy) {
+  //
+  //  //Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitZ());
+  //  //Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitY());
+  //  //Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitX());
+  //  //
+  //  //Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+  //  //
+  //  //Eigen::Matrix3d rotationMatrix = q.matrix();
+  //  
+  //  auto rangle = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX());
+  //  auto pangle = Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY());
+  //  auto yangle = Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+  //  auto rpyangle = rangle * pangle * yangle;
+
+  //  return rpyangle.toRotationMatrix();
+  //}
+
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseCompound (std::ifstream &ifs) {
+    std::cout << "  : Shape Compound\n";
+
+    std::string str;
+    ifs >> str;
+
+    std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
+
+    /* statement guard */
+    if (str != "{") {
+      fprintf(stderr, "%s : statement error\n", __FUNCTION__);
+      return shapes;
+    }
+
+    while(1) {
+      ifs >> str;
+      /* statement guard */
+      if (str == "}") {
+        break;
+      }
+
+      /* YRP or RPY */
+      Dp::Math::real deg;
+      Eigen::Vector3d xyz, rpy;
+      ifs >> xyz(0);
+      ifs >> xyz(1);
+      ifs >> xyz(2);
+      ifs >> deg; rpy(0) = Dp::Math::deg2rad(deg);
+      ifs >> deg; rpy(1) = Dp::Math::deg2rad(deg);
+      ifs >> deg; rpy(2) = Dp::Math::deg2rad(deg);
+
+      //auto rot = rpy2mat3(rpy) * AngleAxisd(Dp::Math::deg2rad(90), Vector3d::UnitX());
+      auto rot = rpy2mat3(rpy);
+      auto shape = ImportShapeFile(str);
+      for (auto shp: shape) {
+        shp->SetOffset(xyz, rot);
+      }
+
+      //shapes.push_back(shape);
+      shapes.splice(shapes.end(), shape);
+    }
+
+    //link.AddShape(shapes);
+    return shapes;
+  }
+
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseCylinder (std::ifstream &ifs) {
+    std::cout << "  : Shape Cylinder\n";
+
+    Dp::Math::real radius, height;
+    ifs >> radius;
+    ifs >> height;
+
+    std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
+
+    auto shape = std::make_shared<WiredCylinder>(
+      //Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*height/2.0, radius, height, 20);
+      Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){1,0,0}).toRotationMatrix(),  Eigen::Vector3f::Zero(), radius, height, 20);
+
+    shapes.push_back(shape);
+
+    return shapes;
+  }
+
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseRectangular (std::ifstream &ifs) {
+    std::cout << "  : Shape Box\n";
+
+    Dp::Math::real lx,ly,lz;
+    ifs >> lx;
+    ifs >> ly;
+    ifs >> lz;
+
+    std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
+
+    auto shape = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), lx, ly, lz);
+
+    shapes.push_back(shape);
+
+    return shapes;
+  }
+
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseShape (std::string &attr_type, std::ifstream &ifs) {
+      static const std::unordered_map<std::string, std::function<std::list<std::shared_ptr<InterfaceSceneObject>>(std::ifstream&)>> cases = {
+        {"Cylinder"      , [](std::ifstream &ifs){return parseCylinder(ifs);         }},
+        {"Rectangular"   , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
+        {"Box"           , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
+        {"Compound"      , [](std::ifstream &ifs){return parseCompound(ifs);         }}
+      };
+      //static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
+      //  {"JointInertia"  , parseJointInertia  },
+      //  {"JointViscosity", parseJointViscosity},
+      //  {"JointRange"    , parseJointRange    }
+      //};
+      auto result = cases.find(attr_type);
+      /* TODO */
+      std::list<std::shared_ptr<InterfaceSceneObject>> def;
+      return result != cases.end() ? result->second(ifs) : def ;
+  }
+
+  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile (std::string &filepath) {
+
+    std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
+
+    std::ifstream ifs(filepath);
+    if (!ifs.good()) {
+      std::cout << "error link:" << filepath << "\n";
+      return shapes;
+    }
+
+    std::string str;
+    ifs >> str;
+
+    shapes = parseShape(str, ifs);
+
+    return shapes;
+  }
+
+  std::shared_ptr<DrawableLink> ImportLinkFile (std::string &filepath) {
+    std::ifstream ifs(filepath);
+    if (!ifs.good()) {
+      std::cout << "error link:" << filepath << "\n";
+      return NULL;
+    }
+
+    std::string type;
+    std::string name;
+    //std::getline(ifs, type, ' ');
+    //std::getline(ifs, name, ' ');
+    ifs >> type;
+    ifs >> name;
+    std::cout << "type: " << type << ", name: " << name << "|" << std::endl;
+
+    auto joint = RotaryJoint::Create(name.c_str(), parseRotaryAxis(type));
+
+    auto link = ssg::DrawableLink::Create(name.c_str(), joint, (Vector3d){0.0, 0.0, 0.0}, 0, (Vector3d){0.0,0.0,0.0}, Matrix3d::Zero());
+
+    while(1)
+    {
+      std::string str;
+      ifs >> str;
+      std::cout << "===: " << str << std::endl;
+      if (ifs.eof()) break;
+
+      std::cout << "--: " << filepath << "  ---:" << str << ":" << ifs.eof() << ":" << std::endl;
+      parseLinkAttribute(str, ifs, *link);
+    }
+
+    return link;
+  }
+
+  std::shared_ptr<DrawableLink> ImportLinkFile (std::string &dirpath, std::string &filename) {
+    std::string filepath = dirpath + filename;
+    return ImportLinkFile(filepath);
+  }
+
+  /* TODO: DrawableLink --> Link */
+  std::shared_ptr<DrawableLink> test2(std::string &filepath) {
+    std::ifstream ifs(filepath);
+    if (!ifs.good()) {
+      std::cout << "error link:" << filepath << "\n";
+      return NULL;
+    }
+
+    /* object name */
+    std::string obj_name;
+    std::string root_file;
+    std::getline(ifs, obj_name);
+    std::getline(ifs, root_file);
+    /*               file.name --> "" */
+    /*              /file.name --> "/" */
+    /* hoge/fuga/aho/file.name --> "hoge/fuga/aho/" */
+    //std::string data_dir = root_file.substr(0, root_file.find_last_of("/") + 1);
+    auto link = ImportLinkFile(root_file);
+    if (link == NULL) {
+      return NULL;
+    }
+
+    std::string str;
+    while(std::getline(ifs, str))
+    {
+      std::string tmp;
+      std::istringstream stream(str);
+      while(std::getline(stream, tmp, ' '))
+      {
+        if (tmp == "InitJointValue") {
+          std::string link_name;
+          std::getline(stream, link_name, ' ');
+          Dp::Math::real link_val;
+          stream >> link_val;
+          auto joint = link->FindJoint(link_name);
+          if (joint) {
+            joint->SetValue(link_val);
+          }
+          //node2->GetJoint().SetValue(-rad + Dp::Math::deg2rad(-120));
+          /* TODO: SET */
+          //std::cout << link_name << ":" << link_val << std::endl;
+        }
+      }
+    }
+
+    return link;
+  }
+
+}
+
 Object createShpere (GLfloat radius, GLint pn_r, GLint pn_h) {
   GLfloat r = radius;
   GLfloat top_pos[pn_r + 2][3];
@@ -1258,9 +2488,9 @@ Object createShpere (GLfloat radius, GLint pn_r, GLint pn_h) {
   top_pos[0][2] =   r;
 
   for (size_t i = 1; i < pn_r + 2; i++) {
-    GLfloat rad = PI * 1 / pn_h;
+    GLfloat rad = Dp::Math::PI * 1 / pn_h;
     GLfloat r_h   = r * sin(rad);
-    GLfloat rad_h = 2 * PI * i / pn_r;
+    GLfloat rad_h = 2 * Dp::Math::PI * i / pn_r;
 
     top_pos[i][0] = r_h * cos(rad_h);
     top_pos[i][1] = r_h * sin(rad_h);
@@ -1340,7 +2570,7 @@ int main()
 
   GLfloat temp0[16];
   GLfloat temp1[16];
-  cameraMatrix(90.0f, 1.0f, 0.5f, 20.0f, temp1);
+  cameraMatrix(90.0f, 1.0f, 0.05f, 2.0f, temp1);
 
   GLuint width = 640;
   GLuint height = 480;
@@ -1398,11 +2628,64 @@ int main()
   //SolidSphere obj(0.5, 20, 3);
   //WiredSphere obj(0.5, 20, 10);
   //SolidCylinder obj(0.5, 1.0, 20);
-  WiredCylinder obj(0.5, 1.0, 20);
-  //cylinder obj(0.5, 1.0, 20);
 
-  GLfloat veloc = 0.05;
-  GLfloat cpos[3] = {+2.0, 0.0, 0.0};
+  //auto obj1  = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.50, 0.2, 20);
+  //auto obj2  = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::UnitZ()*0.25, 0.05, 0.5, 20);
+  //auto obj1  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.05, 0.02, 20);
+  //auto obj1  = std::make_shared<WiredCone>( Eigen::Vector3f::Zero(), 0.05, 0.05, 20);
+  auto obj1  = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), 1, 1, 0.02);
+  Vector3d pos_ = (Vector3d){0.0,0.0,-0.101};
+  Matrix3d rot_ = Eigen::Matrix3d::Identity();
+  obj1->SetOffset(pos_, rot_);
+  auto obj21 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){0,1,0}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.02, 6);
+  auto obj22 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
+  auto obj31 = std::make_shared<WiredSphere>(0.020, 20, 20);
+  auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
+  auto obj4  = ssg::ImportObject("./test.stl");
+  //auto obj4  = ssg::ImportObject("./phoenix_ugv.md2");
+  //auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.50, 0.2, 20);
+  //auto obj31 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.20, 0.2, 20);
+  //auto obj32 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::UnitZ()*0.25, 0.05, 0.5, 20);
+  obj1->SetTransformMatrixLocId(transformMatrixLocation);
+  obj21->SetTransformMatrixLocId(transformMatrixLocation);
+  obj22->SetTransformMatrixLocId(transformMatrixLocation);
+  obj31->SetTransformMatrixLocId(transformMatrixLocation);
+  obj32->SetTransformMatrixLocId(transformMatrixLocation);
+  obj4->SetTransformMatrixLocId(transformMatrixLocation);
+  std::list<std::shared_ptr<InterfaceSceneObject>> objs3;
+  objs3.push_back(obj31);
+  objs3.push_back(obj32);
+  std::list<std::shared_ptr<InterfaceSceneObject>> objs2;
+  objs2.push_back(obj21);
+  objs2.push_back(obj22);
+  auto node1 = ssg::DrawableLink::Create("A", obj1,  RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.00}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
+  auto node2 = ssg::DrawableLink::Create("B", objs2, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.050,0.00}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
+  auto node3 = ssg::DrawableLink::Create("C", objs3, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
+  auto node4 = ssg::DrawableLink::Create("D", obj4,  RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
+  //node1->LPos() = Eigen::Vector3d(0.0,0.0,0.0);
+  //node2->LPos() = Eigen::Vector3d(0.0,0.0,0.10);
+  //node3->LPos() = Eigen::Vector3d(0.0,0.0,0.50);
+  node3->AddChild(node4);
+  node2->AddChild(node3);
+  node1->AddChild(node2);
+
+  auto rot = Eigen::Matrix3d();
+  rot << 1,0,0,
+         0,0.9800665778412416, -0.19866933079506122,
+         0,0.19866933079506122, 0.9800665778412416;
+  node2->LRot() *= rot;
+  node3->LRot() *= rot;
+
+  std::string name = "./obj/eV/eV.obj";
+  auto node_1 = ssg::test2(name);
+  if (node_1 == NULL) {
+    fprintf(stderr, "fail to load %s.\n", name.c_str());
+    return 1;
+  }
+  node_1->SetTransformMatrixLocId(transformMatrixLocation);
+
+  GLfloat veloc = 0.005;
+  GLfloat cpos[3] = {+0.20, 0.0, 0.0};
   GLfloat cdir_len = -2.0;
   GLfloat cyaw = 0.0;
   GLfloat cdir[3] = {cdir_len, 0.0, 0.0};
@@ -1454,7 +2737,6 @@ int main()
       }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-      printf("%lf %lf\n", cpos[0], cpos[1]);
       // TODO: cross product
       for (size_t i = 0; i < 3; i++) {
         cpos[i] -= veloc * cdir_left[i] / len;
@@ -1484,7 +2766,7 @@ int main()
     glUseProgram(program);
 
     glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, projectionMatrix);
-    glUniformMatrix4fv(transformMatrixLocation, 1, GL_FALSE, transformMatrix);
+    //glUniformMatrix4fv(transformMatrixLocation, 1, GL_FALSE, transformMatrix);
 
     //glUniform1f(aspectLoc, aspect_ratio);
     glUniform2fv(sizeLoc, 1, size);
@@ -1499,7 +2781,37 @@ int main()
     //glDrawArrays(GL_TRIANGLE_STRIP, 0, object.count);
     //glDrawArrays(GL_QUAD_STRIP, 0, object.count);
 
-    obj.draw();
+    auto rot = Eigen::Matrix3d();
+    rot << 1,0,0,
+           0,0.9800665778412416, -0.19866933079506122,
+           0,0.19866933079506122, 0.9800665778412416;
+    //node.WPos() += Eigen::Vector3d(0,0,0.01);
+    //node3->LRot() *= rot;
+    static Dp::Math::real rad = 0.00;
+    static bool is_increase = false;
+    if (is_increase) {
+      rad += 0.02;
+      if (rad > Dp::Math::deg2rad(30)) {
+        is_increase = false;
+      }
+    } else {
+      rad -= 0.02;
+      if (rad < Dp::Math::deg2rad(-30)) {
+        is_increase = true;
+      }
+    }
+    node2->GetJoint().SetValue(-rad + Dp::Math::deg2rad(-120));
+    node3->GetJoint().SetValue(rad + Dp::Math::deg2rad(-60));
+    //obj1->SetScale(1.0 + 10 * Dp::Math::rad2deg(rad) / 30);
+    //obj1->SetScale(10 * rad / Dp::Math::deg2rad(60));
+    node1->UpdateCasCoords();
+    node1->ExecAll();
+
+
+    node_1->UpdateCasCoords();
+    node_1->ExecAll();
+    //node_1->FindJoint("FR_HIP_PITCH")->SetValue(-rad + Dp::Math::deg2rad( 0));
+    //node_1->FindJoint("FR_KNEE_PITCH")->SetValue( rad + Dp::Math::deg2rad(90));
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);
@@ -1511,14 +2823,16 @@ int main()
     glfwPollEvents();
 #else
     /* non block */
-    glfwWaitEvents();
+    //glfwWaitEvents();
+    glfwPollEvents();
 #endif
 
     cmeasure.update();
 
     count++;
- }
+  }
 
+  //ssg::test();
   return 0;
 }
 

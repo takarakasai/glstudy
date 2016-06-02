@@ -1,0 +1,8 @@
+eV
+obj/eV/Base.lnk
+
+InitJointValue FR_HIP_YAW      0.0
+InitJointValue FR_HIP_PITCH    3.665191429188092
+InitJointValue FR_KNEE_PITCH   -1.0471975511965976
+InitJointValue FR_ANKLE_PITCH  -1.0471975511965976
+
