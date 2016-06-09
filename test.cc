@@ -36,31 +36,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-// 頂点配列オブジェクトの作成
-// vertices:頂点の数
-// position:頂点の位置を格納した配列
-GLuint createObject (GLuint vertices, const GLfloat (*position)[3]) {
-  //頂点配列オブジェクト
-  GLuint vao;
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
-  //頂点バッファオブジェクト
-  GLuint vbo;
-  glGenBuffers(1, &vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof (GLfloat) * 3 * vertices, position, GL_STATIC_DRAW);
-  //結合されている頂点バッファオブジェクトをin変数から参照できるようにする
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(0);
-
-  //頂点配列オブジェクトの結合を解除する
-  glBindVertexArray(0);
-  //頂点バッファオブジェクトの結合を解除する
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  return vao;
-}
-
 #include <math.h>
 
 void cameraMatrix(float fovy, float aspect, float near, float far, GLfloat *matrix) {
@@ -137,20 +112,9 @@ static GLfloat transformMatrix[16] = {
   0.0, 0.00, 0.00, 1.0
 };
 
-// 形状データ
-typedef struct s_Object {
-  // 頂点配列オブジェクト名
-  GLuint vao;
-  GLuint vao2;
-  // データの要素数
-  GLsizei count;
-}Object;
-
 /*
  *  pn : patitioning number
  * */
-
-typedef int32_t errno_t;
 
 #include <vector>
 #include <memory>
@@ -2002,64 +1966,6 @@ namespace ssg {
 
 }
 
-Object createShpere (GLfloat radius, GLint pn_r, GLint pn_h) {
-  GLfloat r = radius;
-  GLfloat top_pos[pn_r + 2][3];
-
-  top_pos[0][0] = 0.0;
-  top_pos[0][1] = 0.0;
-  top_pos[0][2] =   r;
-
-  for (size_t i = 1; i < pn_r + 2; i++) {
-    GLfloat rad = Dp::Math::PI * 1 / pn_h;
-    GLfloat r_h   = r * sin(rad);
-    GLfloat rad_h = 2 * Dp::Math::PI * i / pn_r;
-
-    top_pos[i][0] = r_h * cos(rad_h);
-    top_pos[i][1] = r_h * sin(rad_h);
-    top_pos[i][2] = r   * cos(rad);
-    //top_pos[i][2] = r - (2.0 * r * 1 / pn_h);
-    //printf("%d %lf %lf %lf\n", (int)i, top_pos[i][0], top_pos[i][1], top_pos[i][2]);
-  }
-
-  const int nov = pn_r + 2;
-
-  Object object;
-  object.vao  = createObject(nov, top_pos);
-  object.count = nov;
-
-  return object;
-}
-
-// 矩形のデータを作成する
-Object createRectangle () {
-  // 頂点の位置データ
-  static const GLfloat position[][3] =
-  {
-    { -0.5, -1.5f,  1.5f },
-    { -0.5, -1.5f, -1.5f },
-    { -0.5,  1.5f,  1.5f },
-    { -0.5,  1.5f, -1.5f }
-  };
-  static const GLfloat position2[][3] =
-  {
-    { -0.1, -1.0f,  1.0f },
-    { -0.1, -1.0f, -1.0f },
-    { -0.1,  1.0f,  0.5f },
-    { -0.1,  1.0f, -0.5f }
-  };
-  // 頂点の数
-  static const int vertices  = (sizeof position  / sizeof position[0]);
-  static const int vertices2 = (sizeof position2 / sizeof position2[0]);
-  // 頂点配列オブジェクトの作成
-  Object object;
-  object.vao  = createObject(vertices, position);
-  object.vao2 = createObject(vertices2, position2);
-  object.count = vertices;
-  //object.count = vertices + vertices2;
-  return object;
-}
-
 void vec3_cross_product(GLfloat a[3], GLfloat b[3], GLfloat out[3]) {
 
   out[0] =  a[1] * b[2] - a[2] * b[1];
@@ -2140,11 +2046,6 @@ int main()
   const GLint dpmLoc = glGetUniformLocation(program, "dpm");
   printf("sizeLoc : %d\n", sizeLoc);
   printf("dpmLoc  : %d\n", dpmLoc);
-
-  // make shape data
-  const Object object = (createRectangle());
-  
-  const Object sphere1 = createShpere(0.5, 3, 3);
 
   //sphere sphere2(0.5, 10, 20);
   //sphere obj(0.5, 20, 20);
