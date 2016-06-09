@@ -1,4 +1,7 @@
 
+#ifndef LINK_H
+#define LINK_H
+
 #include <list>
 #include <string>
 
@@ -134,4 +137,6 @@ public:
     return name_;
   }
 };
+
+#endif
 

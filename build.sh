@@ -6,7 +6,7 @@ if [ "$(uname)" == "Darwin" ]; then
   c++ test.cc --std=c++11 -framework OpenGL -lglfw3 -lGLEW -o test.out
 elif [ "$(uname)" == "Linux" ]; then
   echo "-- Linux"
-  g++ test.cc --std=c++11 -lglfw -lGLEW -lGL -lassimp -o test.out
+  g++ test.cc Shader.cc --std=c++11 -lglfw -lGLEW -lGL -lassimp -o test.out
 else
   echo "-- not supported"
 fi

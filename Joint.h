@@ -1,4 +1,7 @@
 
+#ifndef JOINT_H
+#define JOINT_H
+
 #include <list>
 #include <string>
 
@@ -134,4 +137,6 @@ public:
     return 0; 
   }
 };
+
+#endif
 

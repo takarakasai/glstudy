@@ -1,4 +1,7 @@
 
+#ifndef ACTUATOR_H
+#define ACTUATOR_H
+
 #include "dp_type.h"
 
 class Actuator {
@@ -32,3 +35,4 @@ public:
   inline void SetActForce(Dp::Math::real& force) { acfrc_ = force;};
 };
 
+#endif

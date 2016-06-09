@@ -1,6 +1,6 @@
 
-#ifndef DP_TYPE
-#define DP_TYPE
+#ifndef DP_TYPE_H
+#define DP_TYPE_H
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
@@ -15,11 +15,11 @@ namespace Dp {
     const real PI = 3.14159265359;
     const real PIDEG = 180.0;
 
-    const real rad2deg (const real rad) {
+    constexpr real rad2deg (const real rad) {
       return rad * PIDEG / PI;
     }
 
-    const real deg2rad (const real deg) {
+    constexpr real deg2rad (const real deg) {
       return deg * PI / PIDEG;
     }
 
