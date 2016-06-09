@@ -1,4 +1,7 @@
 
+#ifndef VERTEX_OBJECT_H
+#define VERTEX_OBJECT_H
+
 #include <cmath>
 #include <vector>
 #include <memory>
@@ -273,3 +276,4 @@ public:
   }
 };
 
+#endif
