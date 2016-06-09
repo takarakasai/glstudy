@@ -5,6 +5,8 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 
+typedef int32_t errno_t;
+
 namespace Dp {
 
   namespace Math {
