@@ -11,3 +11,7 @@ else
   echo "-- not supported"
 fi
 
+# real    0m6.149s
+# user    0m5.865s
+# sys 0m0.261s
+
