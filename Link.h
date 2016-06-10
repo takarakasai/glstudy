@@ -135,10 +135,10 @@ public:
 
 
   /* Coexistance of DrawableLink & Link */
-  void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
+  virtual void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
     return;
   }
-  void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
+  virtual void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
     return;
   }
 };

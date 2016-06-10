@@ -183,7 +183,8 @@ namespace ssg {
 
       /* TODO dynamic_cast to be removed */
       auto shapes = ImportShapeFile(file);
-      dynamic_cast<DrawableLink&>(link).AddShape(shapes);
+      //dynamic_cast<DrawableLink&>(link).AddShape(shapes);
+      link.AddShape(shapes);
 
       std::cout << "Shape : " << file << "\n";
 
