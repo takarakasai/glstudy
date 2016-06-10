@@ -23,6 +23,8 @@
 #include "Mesh.h"
 #include "PrimitiveObject.h"
 
+#include "DrawableLink.h"
+
 using namespace Eigen;
 
 static GLfloat aspect_ratio = 0;
@@ -76,89 +78,8 @@ static GLfloat transformMatrix[16] = {
 #include <unordered_map>
 #include <functional>
 
-/* ssg : Simple Scene Graph */
 namespace ssg {
 
-  class DrawableLink : public Link {
-  private:
-    //const char* name_;
-    //std::string name_;
-
-    //std::shared_ptr<InterfaceSceneObject> obj_ = NULL;
-    std::list<std::shared_ptr<InterfaceSceneObject>> objs_;
-  
-  public:
-  
-    DrawableLink(const char* name,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) :
-         Link(name, joint, lpos, mass, centroid, cinertia) {
-    };
-    DrawableLink(const char* name,
-         std::shared_ptr<InterfaceSceneObject> obj,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) :
-         Link(name, joint, lpos, mass, centroid, cinertia) {
-        objs_.push_back(obj);
-    };
-    DrawableLink(const char* name,
-         std::list<std::shared_ptr<InterfaceSceneObject>> objs,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) :
-         Link(name, joint, lpos, mass, centroid, cinertia) {
-        objs_ = objs;
-    };
-    virtual ~DrawableLink() {};
-
-    static std::shared_ptr<DrawableLink> Create(const char* name,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) {
-      return std::make_shared<DrawableLink>(name, joint, lpos, mass, centroid, cinertia);
-    }
-    static std::shared_ptr<DrawableLink> Create(const char* name,
-         std::shared_ptr<InterfaceSceneObject> obj,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) {
-      return std::make_shared<DrawableLink>(name, obj, joint, lpos, mass, centroid, cinertia);
-    }
-    static std::shared_ptr<DrawableLink> Create(const char* name,
-         std::list<std::shared_ptr<InterfaceSceneObject>> objs,
-         std::shared_ptr<Joint> joint,
-         Vector3d lpos, Dp::Math::real mass, Vector3d centroid,
-         Matrix3d cinertia) {
-      return std::make_shared<DrawableLink>(name, objs, joint, lpos, mass, centroid, cinertia);
-    }
-
-    void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
-      objs_.push_back(obj);
-    }
-
-    void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
-      objs_.splice(objs_.end(), objs);
-    }
-
-    void SetTransformMatrixLocId (GLint id) {
-      for (auto &obj: objs_) {
-        obj->SetTransformMatrixLocId(id);
-      }
-    }
-
-  public:
-    errno_t Exec(void) {
-      for (auto &obj : objs_) {
-        obj->Draw(CasCoords::WRot(), CasCoords::WPos());
-      }
-      return 0;
-    }
-  };
-}
-
-namespace ssg {
   static const Eigen::Vector3d& parseRotaryAxis (std::string &axis_type) {
       static const std::unordered_map<std::string, Eigen::Vector3d> cases = {
         {"Base",        (Eigen::Vector3d){0.0,0.0,0.0}},
@@ -325,24 +246,6 @@ namespace ssg {
       auto result = cases.find(attr_type);
       return result != cases.end() ? result->second(ifs, link) : EINVAL ;
   }
-
-  //static Eigen::Matrix3d rpy2mat3 (Eigen::Vector3d rpy) {
-  //
-  //  //Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitZ());
-  //  //Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitY());
-  //  //Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitX());
-  //  //
-  //  //Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
-  //  //
-  //  //Eigen::Matrix3d rotationMatrix = q.matrix();
-  //  
-  //  auto rangle = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX());
-  //  auto pangle = Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY());
-  //  auto yangle = Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
-  //  auto rpyangle = rangle * pangle * yangle;
-
-  //  return rpyangle.toRotationMatrix();
-  //}
 
   static std::list<std::shared_ptr<InterfaceSceneObject>> parseCompound (std::ifstream &ifs) {
     std::cout << "  : Shape Compound\n";
@@ -648,7 +551,7 @@ int main()
   auto obj22 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
   auto obj31 = std::make_shared<WiredSphere>(0.020, 20, 20);
   auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
-  auto obj4  = ssg::ImportObject("./test.stl");
+  auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
   //auto obj4  = ssg::ImportObject("./phoenix_ugv.md2");
   //auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.50, 0.2, 20);
   //auto obj31 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.20, 0.2, 20);

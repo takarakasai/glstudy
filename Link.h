@@ -13,11 +13,7 @@
 
 #include "Joint.h"
 
-//#include <eigen3/Eigen/Geometry>
-
-//using namespace std;
-//using namespace Eigen;
-//using namespace Dp::Math;
+class InterfaceSceneObject;
 
 class Link : public CasCoords {
 private:
@@ -135,6 +131,15 @@ public:
 
   std::string& GetName() {
     return name_;
+  }
+
+
+  /* Coexistance of DrawableLink & Link */
+  void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
+    return;
+  }
+  void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
+    return;
   }
 };
 
