@@ -1,7 +1,24 @@
 
 #include "View.h"
 
+#include "dp_type.h"
+
 namespace ssg {
+
+  Eigen::Matrix4d cameraMatrix(Dp::Math::real fovy, Dp::Math::real aspect,
+                               Dp::Math::real near, Dp::Math::real far) {
+      Dp::Math::real f  = 1.0 / tanf(Dp::Math::deg2rad(fovy * 0.5));
+      Dp::Math::real dz = far - near;
+
+      Eigen::Matrix4d cmat;
+      cmat <<
+          f / aspect, 0.0,              0.0,  0.0,
+                 0.0,   f,              0.0,  0.0,
+                 0.0, 0.0,   -(far+near)/dz, -1.0,
+                 0.0, 0.0, -2.0*far*near/dz,  0.0;
+
+      return cmat;
+  }
 
   void cameraMatrix(float fovy, float aspect, float near, float far, GLfloat *matrix) {
     float f = 1.0f / tanf(fovy * 0.5f * 3.141593f / 180.0f);
@@ -16,7 +33,46 @@ namespace ssg {
     matrix[ 6] = matrix[ 7] = matrix[ 8] = matrix[ 9] =
     matrix[12] = matrix[13] = matrix[15] = 0.0f;
   }
+
+  ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f, temp0);
+
+  Eigen::Matrix4d lookAt(
+          Dp::Math::real ex, Dp::Math::real ey, Dp::Math::real ez,
+          Dp::Math::real tx, Dp::Math::real ty, Dp::Math::real tz,
+          Dp::Math::real ux, Dp::Math::real uy, Dp::Math::real uz) {
+    Dp::Math::real l;
+    Eigen::Matrix4d mat;
+
+    tx = ex - tx;
+    ty = ey - ty;
+    tz = ez - tz;
+    l = sqrtf(tx * tx + ty * ty + tz * tz);
+    mat(0, 2) = tx / l;
+    mat(1, 2) = ty / l;
+    mat(2, 2) = tz / l;
+
+    tx = uy * mat(2, 2) - uz * mat(1, 2);
+    ty = uz * mat(0, 2) - ux * mat(2, 2);
+    tz = ux * mat(1, 2) - uy * mat(0, 2);
+    l = sqrtf(tx * tx + ty * ty + tz * tz);
+    mat(0, 0) = tx / l;
+    mat(1, 0) = ty / l;
+    mat(2, 0) = tz / l;
+
+    mat(0, 1) = mat(1, 2) * mat(2, 0) - mat(2, 2) * mat(1, 0);
+    mat(1, 1) = mat(2, 2) * mat(0, 0) - mat(0, 2) * mat(2, 0);
+    mat(1, 1) = mat(0, 2) * mat(1, 0) - mat(1, 2) * mat(0, 0);
+    
+    mat(3, 0) = -(ex * mat(0, 0) + ey * mat(1, 0) + ez * mat(2, 0));
+    mat(3, 1) = -(ex * mat(0, 1) + ey * mat(1, 1) + ez * mat(2, 1));
+    mat(3, 2) = -(ex * mat(0, 2) + ey * mat(1, 2) + ez * mat(2, 2));
   
+    mat(0, 3) = mat(1, 3) = mat(2, 3) = 0.0;
+    mat(3, 3) = 1.0;
+  
+    return mat;
+  }
+
   void lookAt(float ex, float ey, float ez,
               float tx, float ty, float tz,
               float ux, float uy, float uz,

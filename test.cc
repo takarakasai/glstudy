@@ -100,6 +100,7 @@ int main()
   GLfloat temp0[16];
   GLfloat temp1[16];
   ssg::cameraMatrix(90.0f, 1.0f, 0.05f, 2.0f, temp1);
+  Eigen::Matrix4d camera_mat = ssg::cameraMatrix(90.0, 1.0, 0.05, 2.0);
 
   GLuint width = 640;
   GLuint height = 480;
@@ -282,6 +283,15 @@ int main()
     //lookAt(2.0f * cos(rad_tick), 2.0f * sin(rad_tick), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, temp0);
     ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f, temp0);
     multiplyMatrix(temp0, temp1, projectionMatrix);
+
+    for (int i = 0; i < 16; i++) {
+      if (i % 4 == 0) std::cout << std::endl;
+      std::cout << " " << temp1[i];
+    }
+
+    //camera_mat = ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f) * camera_mat;
+    Eigen::Matrix4d projection_mat = camera_mat * ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f);
+    
 
     //ウィンドウを消去する
     //glClear(GL_COLOR_BUFFER_BIT);
