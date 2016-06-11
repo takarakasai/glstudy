@@ -3,7 +3,7 @@
 if [ "$(uname)" == "Darwin" ]; then
   echo "-- OSX"
   #g++ test.cc --std=c++11 -framework OpenGL -lglfw3 -lGLEW -o test.out
-  c++ test.cc --std=c++11 -framework OpenGL -lglfw3 -lGLEW -o test.out
+  c++ test.cc Shader.cc View.cc Vertex.cc Utils.cc --std=c++11 -framework OpenGL -lglfw3 -lGLEW -lassimp -o test.out
 elif [ "$(uname)" == "Linux" ]; then
   echo "-- Linux"
   g++ test.cc Shader.cc View.cc Vertex.cc Utils.cc --std=c++11 -lglfw -lGLEW -lGL -lassimp -o test.out

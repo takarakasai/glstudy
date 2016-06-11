@@ -166,9 +166,9 @@ int main()
   auto obj22 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
   auto obj31 = std::make_shared<WiredSphere>(0.020, 20, 20);
   auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
-  auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
+  //auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
   //auto obj4  = ssg::ImportObject("./phoenix_ugv.md2");
-  //auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.50, 0.2, 20);
+  auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.005, 20);
   //auto obj31 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.20, 0.2, 20);
   //auto obj32 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::UnitZ()*0.25, 0.05, 0.5, 20);
   obj1->SetTransformMatrixLocId(transformMatrixLocation);
@@ -284,10 +284,10 @@ int main()
     ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f, temp0);
     multiplyMatrix(temp0, temp1, projectionMatrix);
 
-    for (int i = 0; i < 16; i++) {
-      if (i % 4 == 0) std::cout << std::endl;
-      std::cout << " " << temp1[i];
-    }
+    //for (int i = 0; i < 16; i++) {
+    //  if (i % 4 == 0) std::cout << std::endl;
+    //  std::cout << " " << temp1[i];
+    //}
 
     //camera_mat = ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f) * camera_mat;
     Eigen::Matrix4d projection_mat = camera_mat * ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f);
@@ -342,10 +342,10 @@ int main()
     node1->ExecAll();
 
 
-    node_1->UpdateCasCoords();
-    node_1->ExecAll();
     //node_1->FindJoint("FR_HIP_PITCH")->SetValue(-rad + Dp::Math::deg2rad( 0));
     //node_1->FindJoint("FR_KNEE_PITCH")->SetValue( rad + Dp::Math::deg2rad(90));
+    node_1->UpdateCasCoords();
+    node_1->ExecAll();
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);

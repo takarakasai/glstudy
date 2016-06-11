@@ -55,6 +55,7 @@ public:
     // position/rotation from basis;
     pos = pos - basis.Pos();
     rot = rot * basis.Rot().transpose();
+    return (*this);
   }
 
   Coordinates operator/ (Coordinates &basis) {
@@ -193,6 +194,7 @@ public:
 
   errno_t Update (void) {
     ECALL(update(NULL));
+    return 0;
   };
 };
 

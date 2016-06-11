@@ -5,7 +5,11 @@
 #include <eigen3/Eigen/Core>
 
 /* TODO:remove */
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif
 
 #include "dp_type.h"
 

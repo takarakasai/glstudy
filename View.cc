@@ -34,8 +34,6 @@ namespace ssg {
     matrix[12] = matrix[13] = matrix[15] = 0.0f;
   }
 
-  ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f, temp0);
-
   Eigen::Matrix4d lookAt(
           Dp::Math::real ex, Dp::Math::real ey, Dp::Math::real ez,
           Dp::Math::real tx, Dp::Math::real ty, Dp::Math::real tz,

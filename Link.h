@@ -21,7 +21,6 @@ private:
   std::string name_;
 
   std::shared_ptr<Joint> joint_;
-  std::list<std::shared_ptr<Link>> clinks_;
 
   Eigen::Vector3d l_tippos_;
   Eigen::Matrix3d l_tiprot_;
@@ -32,6 +31,9 @@ private:
   std::shared_ptr<Joint>& getJoint() {
     return joint_;
   }
+
+protected:
+  std::list<std::shared_ptr<Link>> clinks_;
 
 public:
   //Link(const char* name) : name_(name) {};
@@ -97,11 +99,13 @@ public:
 
   errno_t AssignJoint (std::shared_ptr<Joint> joint) {
     joint_ = std::move(joint);
+    return 0;
   }
 
   errno_t AddChild (std::shared_ptr<Link> clink) {
     CasCoords::AddChild(clink);
     clinks_.push_back(clink);
+    return 0;
   }
 
   errno_t ApplyLocalCoords() {
@@ -135,10 +139,16 @@ public:
 
 
   /* Coexistance of DrawableLink & Link */
+  /* TODO: int32_t --> GLint */
+  virtual void SetTransformMatrixLocId (int32_t id) {
+    return;
+  }
   virtual void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
+    std::cout << "  ERROR-------------------------------\n";
     return;
   }
   virtual void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
+    std::cout << "  ERROR-------------------------------\n";
     return;
   }
 };

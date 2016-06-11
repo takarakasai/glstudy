@@ -76,14 +76,18 @@ namespace ssg {
       objs_.splice(objs_.end(), objs);
     }
 
-    void SetTransformMatrixLocId (GLint id) {
-      for (auto &obj: objs_) {
+    void SetTransformMatrixLocId (int32_t id) {
+      for (auto &obj : objs_) {
         obj->SetTransformMatrixLocId(id);
+      }
+      for (auto &link : clinks_) {
+        link->SetTransformMatrixLocId(id);
       }
     }
 
   public:
     errno_t Exec(void) {
+      auto tmp = CasCoords::WPos();
       for (auto &obj : objs_) {
         obj->Draw(CasCoords::WRot(), CasCoords::WPos());
       }

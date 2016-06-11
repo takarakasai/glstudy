@@ -15,11 +15,11 @@ namespace Dp {
     const real PI = 3.14159265359;
     const real PIDEG = 180.0;
 
-    constexpr real rad2deg (const real rad) {
+    static const real rad2deg (const real rad) {
       return rad * PIDEG / PI;
     }
 
-    constexpr real deg2rad (const real deg) {
+    static const real deg2rad (const real deg) {
       return deg * PI / PIDEG;
     }
 

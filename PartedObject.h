@@ -10,7 +10,11 @@
 
 //#include <GL/glew.h>
 //#include <GLFW/glfw3.h>
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif
 
 #include "dp_type.h"
 #include "Vertex.h"
