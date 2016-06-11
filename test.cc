@@ -42,38 +42,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-#include <math.h>
-
-void multiplyMatrix(const GLfloat *m0, const GLfloat *m1, GLfloat *matrix)
-{
-  for (int i = 0; i < 16; ++i) {
-    int j = i & ~3, k = i & 3;
-
-    matrix[i] = m0[j + 0] * m1[ 0 + k]
-              + m0[j + 1] * m1[ 4 + k]
-              + m0[j + 2] * m1[ 8 + k]
-              + m0[j + 3] * m1[12 + k];
-  }
-}
-
-static GLfloat projectionMatrix[16];
-static GLfloat transformMatrix[16] = {
-  1.0, 0.00, 0.00, 0.0,
-  0.0, 0.71,-0.71, 0.0,
-  0.0, 0.71, 0.71, 0.0,
-  0.0, 0.00, 0.00, 1.0
-};
-
-void vec3_cross_product(GLfloat a[3], GLfloat b[3], GLfloat out[3]) {
-
-  out[0] =  a[1] * b[2] - a[2] * b[1];
-  out[1] = -a[0] * b[2] + a[2] * b[0];
-  out[2] =  a[0] * b[1] - a[1] * b[0];
-
-  return;
-}
-
-void resize(GLFWwindow *const window, int width, int height)
+void cb_resize(GLFWwindow *const window, int width, int height)
 {
   printf("--> %d %d\n", width, height);
   aspect_ratio = (GLfloat)(width) / (GLfloat)(height);
@@ -122,8 +91,8 @@ int main()
 
   //glViewport(100,100,640,480);
 
-  glfwSetWindowSizeCallback(window, resize);
-  resize(window, width, height);
+  glfwSetWindowSizeCallback(window, cb_resize);
+  cb_resize(window, width, height);
  
   // 背景色を指定する
   glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
@@ -252,6 +221,12 @@ int main()
     //std::cout << ssg::lookAt(cpos, cdir_to) << std::endl;
     //std::cout << "===" << std::endl;
 
+    /*
+     * OpenGL shall treat matrix as row-first rule
+     * Eigen shall treat matrix as row-first rule at default 
+     * So you should make transpose matrix
+     */
+    GLfloat projectionMatrix[16];
     Eigen::Matrix4d projection_mat = ssg::lookAt(cpos, cdir_to) * camera_mat;
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
