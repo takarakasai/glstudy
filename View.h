@@ -28,6 +28,11 @@ namespace ssg {
                                Dp::Math::real near, Dp::Math::real far);
 
   Eigen::Matrix4d lookAt(
+          Eigen::Vector3d camera_pos,
+          Eigen::Vector3d camera_dir,
+          Eigen::Vector3d camera_top = Eigen::Vector3d::UnitZ());
+ 
+  Eigen::Matrix4d lookAt(
           Dp::Math::real ex, Dp::Math::real ey, Dp::Math::real ez,
           Dp::Math::real tx, Dp::Math::real ty, Dp::Math::real tz,
           Dp::Math::real ux, Dp::Math::real uy, Dp::Math::real uz);

@@ -281,17 +281,18 @@ int main()
     }
 
     //lookAt(2.0f * cos(rad_tick), 2.0f * sin(rad_tick), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, temp0);
-    ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f, temp0);
-    multiplyMatrix(temp0, temp1, projectionMatrix);
+    Eigen::Vector3d cp = Eigen::Map<Eigen::Vector3f>(cpos, 3).cast<double>();
+    Eigen::Vector3d cd = Eigen::Map<Eigen::Vector3f>(cdir_to, 3).cast<double>();
+    Eigen::Matrix4d m =  ssg::lookAt(cp, cd);
+    std::cout << ssg::lookAt(cp, cd) << std::endl;
+    std::cout << "===" << std::endl;
 
-    //for (int i = 0; i < 16; i++) {
-    //  if (i % 4 == 0) std::cout << std::endl;
-    //  std::cout << " " << temp1[i];
-    //}
+    //Eigen::Matrix4d projection_mat = ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f) * camera_mat;
+    Eigen::Matrix4d projection_mat = ssg::lookAt(cp, cd) * camera_mat;
+    Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
-    //camera_mat = ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f) * camera_mat;
-    Eigen::Matrix4d projection_mat = camera_mat * ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f);
-    
+    std::cout << ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1]    , cdir_to[2], 0.0f, 0.0f, 1.0f) << std::endl;
+    std::cout << "===========================" << std::endl;
 
     //ウィンドウを消去する
     //glClear(GL_COLOR_BUFFER_BIT);
