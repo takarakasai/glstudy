@@ -19,8 +19,9 @@
 namespace ssg {
 
   typedef struct sVertices {
-    std::vector<Eigen::Vector3f> poses; /* position vectors */
-    std::vector<Eigen::Vector3f> norms; /* normal vectors   */
+    std::vector<Eigen::Vector3f> poses; /* position vectors  */
+    std::vector<Eigen::Vector3f> norms; /* normal vectors    */
+    std::vector<Eigen::Vector2f> texs;  /* texture positions */
   
     void push (Eigen::Vector3f pos) {
       poses.push_back(pos);
@@ -31,7 +32,13 @@ namespace ssg {
       poses.push_back(pos);
       norms.push_back(norm);
     }
-  
+
+    void push (Eigen::Vector3f pos, Eigen::Vector3f norm, Eigen::Vector2f tex) {
+      poses.push_back(pos);
+      norms.push_back(norm);
+      texs.push_back(tex);
+    }
+
     size_t size () {
       return poses.size();
     }
@@ -49,7 +56,7 @@ namespace ssg {
   
   Vertices cylinderVertices (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
   
-  Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh);
+  Vertices sphereVertices (Eigen::Vector3f pos, GLfloat radius, size_t nor, size_t noh);
  
   Vertices coneVertices (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
  

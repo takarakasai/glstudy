@@ -28,21 +28,36 @@
 
 #include <math.h>
 
-class WiredRectangular : public UniPartedObject {
+class RectangularBase : public UniPartedObject {
 private:
-  //Vector3f center_;
   GLfloat width_;
   GLfloat length_;
   GLfloat height_;
 
 public:
-  WiredRectangular (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+
+  RectangularBase (
+      const Eigen::Matrix3f &rot, Eigen::Vector3f pos,
+      GLfloat width, GLfloat length, GLfloat height)
     : width_(width), length_(length), height_(height) {
 
     /* make vertices */
     vertices_ = ssg::rectangularVertices(pos, width_, length_, height_);
 
     vertices_.rotate(rot);
+  }
+
+  GLfloat GetWidth()  { return width_;}
+  GLfloat GetLength() { return length_;}
+  GLfloat GetHeight() { return height_;}
+};
+
+class WiredRectangular : public RectangularBase {
+private:
+
+public:
+  WiredRectangular (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+    : RectangularBase(rot, pos, width, length, height) {
 
     indices_.push_back(0); indices_.push_back(1);
     indices_.push_back(0); indices_.push_back(2);
@@ -67,20 +82,69 @@ public:
   }
 };
 
-class WiredCone : public TriPartedObject {
+class SolidRectangular : public RectangularBase {
+private:
+
+public:
+  SolidRectangular (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+    : RectangularBase(rot, pos, width, length, height) {
+
+    indices_.push_back(1);
+    indices_.push_back(0);
+    indices_.push_back(3);
+    indices_.push_back(2);
+
+    indices_.push_back(7);
+    indices_.push_back(6);
+    indices_.push_back(5);
+    indices_.push_back(4);
+
+    indices_.push_back(1);
+    indices_.push_back(0);
+
+    indices_.push_back(4);
+    indices_.push_back(2);
+    indices_.push_back(6);
+
+    indices_.push_back(1);
+    indices_.push_back(5);
+    indices_.push_back(3);
+    indices_.push_back(7);
+
+    BuildObject();
+  }
+  SolidRectangular (Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height)
+    : SolidRectangular(Eigen::Matrix3f::Identity(), pos, width, length, height) {
+  }
+};
+
+class ConeBase : public BiPartedObject {
 private:
   GLfloat radius_;
   GLfloat height_;
   GLint nop_;
 
 public:
-  WiredCone (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+  ConeBase (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
     : radius_(radius), height_(height), nop_(nop) {
 
     /* make vertices */
     vertices_ = ssg::coneVertices(pos, radius_, height_, nop_);
 
     vertices_.rotate(rot);
+
+  }
+  ConeBase (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : ConeBase(Eigen::Matrix3f::Identity(), pos, radius, height, nop) {
+  }
+};
+
+class WiredCone : public ConeBase {
+private:
+
+public:
+  WiredCone (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
+    : ConeBase(rot, pos, radius, height, nop) {
 
     const size_t offset = 1;
 
@@ -91,34 +155,32 @@ public:
       indices_[kTopIdx].push_back(i + offset);
      
       /* bottom circle */
-      indices_[kSidIdx].push_back(i + offset);
+      //indices_[kSidIdx].push_back(i + offset);
 
       /* bottom pyramid */
+      indices_[kBtmIdx].push_back(i + offset);
+    }
+
+    for (size_t i = 0; i < nop + 1; i++) {
       indices_[kBtmIdx].push_back(vertices_.size() - 1);
       indices_[kBtmIdx].push_back(i + offset);
     }
 
-    BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+    //BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
+    BuildObject((const int[2]){GL_LINES, GL_LINE_STRIP});
   }
+
   WiredCone (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
     : WiredCone(Eigen::Matrix3f::Identity(), pos, radius, height, nop) {
   }
 };
 
-class SolidCone : public BiPartedObject {
+class SolidCone : public ConeBase {
 private:
-  GLfloat radius_;
-  GLfloat height_;
-  GLint nop_;
 
 public:
   SolidCone (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t nop)
-    : radius_(radius), height_(height), nop_(nop) {
-
-    /* make vertices */
-    vertices_ = ssg::coneVertices(pos, radius_, height_, nop_);
-
-    vertices_.rotate(rot);
+    : ConeBase(rot, pos, radius, height, nop) {
 
     const size_t offset = 1;
 
@@ -141,18 +203,35 @@ public:
   }
 };
 
-class WiredSphere : public TriPartedObject {
+class SphereBase : public TriPartedObject {
 private:
   GLfloat radius;
   GLint nor, noh;
 
 public:
-  WiredSphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+  SphereBase (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
     : radius(radius), nor(num_of_rpart), noh(num_of_hpart) {
 
     /* make vertices */
-    vertices_ = ssg::sphereVertices(radius, nor, noh);
+    vertices_ = ssg::sphereVertices(pos, radius, nor, noh);
 
+    vertices_.rotate(rot);
+  }
+
+  GLfloat GetRadius() { return radius;}
+  GLint GetNor() { return nor;}
+  GLint GetNoh() { return noh;}
+};
+
+class WiredSphere : public SphereBase {
+private:
+
+public:
+  WiredSphere (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : SphereBase(rot, pos, radius, num_of_rpart, num_of_hpart) {
+
+    size_t nor = num_of_rpart;
+    size_t noh = num_of_hpart;
     const size_t offset = 1;
 
     /* make indices */
@@ -183,20 +262,20 @@ public:
 
     BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
   }
+  WiredSphere (Eigen::Vector3f pos, GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : WiredSphere(Eigen::Matrix3f::Identity(), pos, radius, num_of_rpart, num_of_hpart) {
+  }
 };
 
-class SolidSphere : public TriPartedObject {
+class SolidSphere : public SphereBase {
 private:
-  GLfloat radius;
-  GLint nor, noh;
 
 public:
-  SolidSphere (GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
-    : radius(radius), nor(num_of_rpart), noh(num_of_hpart) {
+  SolidSphere (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : SphereBase(rot, pos, radius, num_of_rpart, num_of_hpart) {
 
-    /* make vertices */
-    vertices_ = ssg::sphereVertices(radius, nor, noh);
-
+    size_t nor = num_of_rpart;
+    size_t noh = num_of_hpart;
     const size_t offset = 1;
 
     /* make indices */
@@ -216,19 +295,44 @@ public:
 
     BuildObject();
   }
+  SolidSphere (Eigen::Vector3f pos, GLfloat radius, GLint num_of_rpart, GLint num_of_hpart)
+    : SolidSphere(Eigen::Matrix3f::Identity(), pos, radius, num_of_rpart, num_of_hpart) {
+  }
 };
 
-class WiredCylinder : public TriPartedObject {
+class CylinderBase : public TriPartedObject {
 private:
-  GLfloat radius;
-  GLfloat height;
-  size_t sectors;
+  GLfloat radius_;
+  GLfloat height_;
+  size_t sectors_;
 
 public:
 
-  WiredCylinder (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
-  //WiredCylinder (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors) 
-    : radius(radius), height(height), sectors(sectors) {
+  CylinderBase (
+      const Eigen::Matrix3f &rot, Eigen::Vector3f pos,
+      GLfloat radius, GLfloat height, size_t sectors)
+    : radius_(radius), height_(height), sectors_(sectors) {
+
+    /* make vertices */
+    vertices_ = ssg::cylinderVertices(pos, radius_, height_, sectors_);
+
+    vertices_.rotate(rot);
+  }
+
+  GLfloat GetRadius()  { return radius_;}
+  GLfloat GetHeight()  { return height_;}
+  GLfloat GetSectors() { return sectors_;}
+};
+
+class WiredCylinder : public CylinderBase {
+private:
+
+public:
+
+  WiredCylinder (
+      const Eigen::Matrix3f &rot, Eigen::Vector3f pos,
+      GLfloat radius, GLfloat height, size_t sectors)
+    : CylinderBase(rot, pos, radius, height, sectors) {
 
     std::cout << "ROT:" << std::endl;
     std::cout << rot << std::endl;
@@ -236,15 +340,8 @@ public:
     std::cout << pos << std::endl;
     std::cout << "R:" << radius << "," << "height:" << height << "," << sectors << std::endl ;
 
-    /* make vertices */
-    vertices_ = ssg::cylinderVertices(pos, radius, height, sectors);
-   
-    //Eigen::Matrix3f rot = Eigen::Matrix3f::Identity();
-    //Eigen::Matrix3f rot;
-    vertices_.rotate(rot);
-
     /* make indices */
-    const size_t num_of_slices = (vertices_.size() - 2) / 2;
+    //const size_t num_of_slices = (vertices_.size() - 2) / 2;
     const size_t offset = 2;
 
     /* make indices */
@@ -272,25 +369,19 @@ public:
 
     BuildObject((const int[3]){GL_LINES, GL_LINE_STRIP, GL_LINES});
   }
-
   WiredCylinder (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
    : WiredCylinder(Eigen::Matrix3f::Identity(), pos, radius, height, sectors) {
   }
+
 };
 
-class SolidCylinder : public TriPartedObject {
+class SolidCylinder : public CylinderBase {
 private:
-  GLfloat radius;
-  GLfloat height;
-  size_t sectors;
 
 public:
 
-  SolidCylinder (GLfloat radius, GLfloat height, size_t sectors)
-    : radius(radius), height(height), sectors(sectors) {
-
-    /* make vertices */
-    vertices_ = ssg::cylinderVertices((Eigen::Vector3f){0.0, 0.0, 0.0}, radius, height, sectors);
+  SolidCylinder (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+    : CylinderBase(rot, pos, radius, height, sectors) {
 
     /* make indices */
     const size_t num_of_slices = (vertices_.size() - 2) / 2;
@@ -307,7 +398,64 @@ public:
 
     BuildObject();
   }
+  SolidCylinder (Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+   : SolidCylinder(Eigen::Matrix3f::Identity(), pos, radius, height, sectors) {
+  }
+
 };
+
+template <class A, class B> class SwitchableSceneObject : public InterfaceSceneObject {
+  InterfaceSceneObject::DrawMode mode_;
+  A wired_;
+  B solid_;
+
+public:
+  errno_t Draw(Eigen::Matrix3d& rot, Eigen::Vector3d& pos) {
+    switch(mode_) {
+      case WIRED: return wired_.Draw(rot, pos);
+      case SOLID: return solid_.Draw(rot, pos);
+      default:    return                    -1;
+    }
+  }
+
+  errno_t SetTransformMatrixLocId (GLint id) {
+    ECALL(wired_.SetTransformMatrixLocId(id));
+    ECALL(solid_.SetTransformMatrixLocId(id));
+    return 0;
+  }
+
+  errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
+    ECALL(wired_.SetOffset(pos, rot));
+    ECALL(solid_.SetOffset(pos, rot));
+    return 0;
+  }
+
+  errno_t SetScale(Dp::Math::real scale) {
+    ECALL(wired_.SetScale(scale));
+    ECALL(solid_.SetScale(scale));
+    return 0;
+  }
+
+  SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
+
+  SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height);
+
+  errno_t SetDrawMode(DrawMode mode) {
+    mode_ = mode;
+    return 0;
+  }
+};
+
+template<> SwitchableSceneObject<WiredCylinder, SolidCylinder>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+    : mode_(SOLID), wired_(rot, pos, radius, height, sectors), solid_(rot, pos, radius, height, sectors) {
+  };
+
+template<> SwitchableSceneObject<WiredRectangular, SolidRectangular>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height) 
+    : mode_(SOLID), wired_(rot, pos, width, length, height), solid_(rot, pos, width, length, height) {
+  }
+
+typedef SwitchableSceneObject<WiredRectangular, SolidRectangular> Rectangular;
+typedef SwitchableSceneObject<WiredCylinder   , SolidCylinder   > Cylinder;
 
 #endif
 

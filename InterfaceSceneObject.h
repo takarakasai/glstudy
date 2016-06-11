@@ -26,6 +26,12 @@ public:
   virtual errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) = 0;
   virtual errno_t SetScale(Dp::Math::real scale) = 0;
 
+  typedef enum {
+    WIRED,
+    SOLID
+  } DrawMode;
+  virtual errno_t SetDrawMode(DrawMode mode) = 0;
+
   //InterfaceSceneObject() {};
   virtual ~InterfaceSceneObject() {};
 };

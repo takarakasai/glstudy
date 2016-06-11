@@ -15,15 +15,15 @@ namespace Dp {
     const real PI = 3.14159265359;
     const real PIDEG = 180.0;
 
-    static const real rad2deg (const real rad) {
+    inline const real rad2deg (const real rad) {
       return rad * PIDEG / PI;
     }
 
-    static const real deg2rad (const real deg) {
+    inline const real deg2rad (const real deg) {
       return deg * PI / PIDEG;
     }
 
-    static Eigen::Matrix3d rpy2mat3 (Eigen::Vector3d rpy) {
+    inline Eigen::Matrix3d rpy2mat3 (Eigen::Vector3d rpy) {
   
       //Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitZ());
       //Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitY());

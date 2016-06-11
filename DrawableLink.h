@@ -68,12 +68,13 @@ namespace ssg {
       return std::make_shared<DrawableLink>(name, objs, joint, lpos, mass, centroid, cinertia);
     }
 
-    void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
-      objs_.push_back(obj);
-    }
-
-    void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
-      objs_.splice(objs_.end(), objs);
+    virtual void SetDrawMode (bool isSolid) {
+      for (auto &obj : objs_) {
+        obj->SetDrawMode(isSolid == true ? InterfaceSceneObject::SOLID : InterfaceSceneObject::WIRED);
+      }
+      for (auto &link : clinks_) {
+        link->SetDrawMode(isSolid);
+      }
     }
 
     void SetTransformMatrixLocId (int32_t id) {
@@ -83,6 +84,14 @@ namespace ssg {
       for (auto &link : clinks_) {
         link->SetTransformMatrixLocId(id);
       }
+    }
+
+    void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
+      objs_.push_back(obj);
+    }
+
+    void AddShape (std::list<std::shared_ptr<InterfaceSceneObject>> objs) {
+      objs_.splice(objs_.end(), objs);
     }
 
   public:

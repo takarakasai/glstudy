@@ -36,11 +36,14 @@ static void error_callback(int error, const char* description)
 {
     fputs(description, stderr);
 }
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+
+#ifdef __linux__
+[[maybe_unused]] static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
+#endif
 
 void cb_resize(GLFWwindow *const window, int width, int height)
 {
@@ -62,9 +65,6 @@ int main()
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLfloat temp0[16];
-  GLfloat temp1[16];
-  ssg::cameraMatrix(90.0f, 1.0f, 0.05f, 2.0f, temp1);
   Eigen::Matrix4d camera_mat = ssg::cameraMatrix(90.0, 1.0, 0.05, 2.0);
 
   GLuint width = 640;
@@ -114,7 +114,7 @@ int main()
   obj1->SetOffset(pos_, rot_);
   auto obj21 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){0,1,0}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.02, 6);
   auto obj22 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
-  auto obj31 = std::make_shared<WiredSphere>(0.020, 20, 20);
+  auto obj31 = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.020, 20, 20);
   auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
   //auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
   auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.005, 20);
@@ -170,7 +170,6 @@ int main()
   while (glfwWindowShouldClose(window) == GL_FALSE)
   {
     static int count = 0;
-    static GLfloat rad_tick = count / 100;
     GLfloat len = cdir.norm();
 
     cdir_left = cdir.cross(ctop_dir);
@@ -212,14 +211,16 @@ int main()
     if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
       cpos += veloc * cdir.cross(ctop_dir) / cdir.norm();
     }
+    if (glfwGetKey(window, GLFW_KEY_W)) {
+      node_1->SetDrawMode(false);
+    }
+    if (glfwGetKey(window, GLFW_KEY_S)) {
+      node_1->SetDrawMode(true);
+    }
 
     cdir(0) = cdir_len * cos(cyaw);
     cdir(1) = cdir_len * sin(cyaw);
     cdir_to = cpos + cdir;
-
-    Eigen::Matrix4d m =  ssg::lookAt(cpos, cdir_to);
-    //std::cout << ssg::lookAt(cpos, cdir_to) << std::endl;
-    //std::cout << "===" << std::endl;
 
     /*
      * OpenGL shall treat matrix as row-first rule

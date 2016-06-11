@@ -245,9 +245,9 @@ namespace ssg {
 
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
-    auto shape = std::make_shared<WiredCylinder>(
-      //Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*height/2.0, radius, height, 20);
-      Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){1,0,0}).toRotationMatrix(),  Eigen::Vector3f::Zero(), radius, height, 20);
+    //auto shape = std::make_shared<WiredCylinder>(
+    auto shape = std::make_shared<Cylinder>(
+      Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){1,0,0}).toRotationMatrix(),  Eigen::Vector3f::Zero(), radius, height, (size_t)20);
 
     shapes.push_back(shape);
 
@@ -264,7 +264,10 @@ namespace ssg {
 
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
-    auto shape = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), lx, ly, lz);
+    auto shape = std::make_shared<Rectangular>(
+        Eigen::AngleAxisf(Dp::Math::deg2rad(0), (Vector3f){0,0,0}).toRotationMatrix(),
+        Eigen::Vector3f::Zero(), lx, ly, (float)lz);
+    //auto shape = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), lx, ly, lz);
 
     shapes.push_back(shape);
 

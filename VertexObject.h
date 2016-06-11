@@ -111,19 +111,18 @@ private:
 public:
 
   static std::shared_ptr<GLuint> gen (size_t num) {
-    //auto ids = std::make_shared<GLuint[num]>;
     std::shared_ptr<GLuint> ids(new GLuint[num], std::default_delete<GLuint[]>());
     glGenVertexArrays(num, ids.get());
-    return std::move(ids);
+    return ids;
   }
 
   vao(GLuint vao_id)
-    : id(vao_id), mode_(0), num_of_data_(0){
+    : id(vao_id), num_of_data_(0), mode_(0) {
   }
 
   vao(void)
   //vao(GLenum mode, size_t num_of_data)
-    : mode_(0), num_of_data_(0)
+    : num_of_data_(0), mode_(0)
   {
     glGenVertexArrays(1, &id);
     DPRINTF(" glGenVertexArrays: 0x%0x\n", id);

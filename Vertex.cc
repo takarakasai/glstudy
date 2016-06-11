@@ -31,13 +31,13 @@ namespace ssg {
     return verts;
   }
   
-  Vertices sphereVertices (GLfloat radius, size_t nor, size_t noh) {
+  Vertices sphereVertices (Eigen::Vector3f pos, GLfloat radius, size_t nor, size_t noh) {
     Vertices verts;
   
     const GLfloat r = radius;
     auto circle  = ssg::circle_tbl(nor);
   
-    verts.push(Eigen::Vector3f(0, 0, +r));
+    verts.push(Eigen::Vector3f(0, 0, +r) + pos);
   
     for (size_t i = 1; i < noh; i++) {
       auto rad = Dp::Math::PI * i / noh;
@@ -46,11 +46,11 @@ namespace ssg {
   
       for (auto vec : circle) {
         auto rvec = rv * vec;
-        verts.push(Eigen::Vector3f(rvec(0), rvec(1), h));
+        verts.push(Eigen::Vector3f(rvec(0), rvec(1), h) + pos);
       }
     }
   
-    verts.push(Eigen::Vector3f(0, 0, -r));
+    verts.push(Eigen::Vector3f(0, 0, -r) + pos);
   
     return verts;
   }

@@ -140,6 +140,9 @@ public:
 
   /* Coexistance of DrawableLink & Link */
   /* TODO: int32_t --> GLint */
+  virtual void SetDrawMode (bool isSolid) {
+    return;
+  }
   virtual void SetTransformMatrixLocId (int32_t id) {
     return;
   }
