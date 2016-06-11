@@ -60,7 +60,7 @@ public:
 
   errno_t Draw(Eigen::Matrix3d& Rot, Eigen::Vector3d& Pos) {
     if (gl_tmat_loc_id_ == -1) {
-      fprintf(stderr, "ERROR %s (%d)\n", __PRETTY_FUNCTION__, gl_tmat_loc_id_);
+      fprintf(stderr, "ERROR %s LocID(%d)\n", __PRETTY_FUNCTION__, gl_tmat_loc_id_);
       return -1;
     }
 
