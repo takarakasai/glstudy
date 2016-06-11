@@ -136,11 +136,8 @@ int main()
   glEnable(GL_DEPTH_TEST);
 
   //プログラムオブジェクトを作成する
-  //const GLuint program = createProgram(vsrc, "pv", fsrc, "fc");
   const GLuint program = ssg::loadProgram("point.vert", {"pv", "normal"}, "point.frag", "fc");
-  //const GLuint program = loadProgram("point.vert", {"pv"}, "point.frag", "fc");
 
-  //const GLint aspectLoc = glGetUniformLocation(program, "aspect");
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
   const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
   const GLint sizeLoc = glGetUniformLocation(program, "size");
@@ -148,16 +145,6 @@ int main()
   printf("sizeLoc : %d\n", sizeLoc);
   printf("dpmLoc  : %d\n", dpmLoc);
 
-  //sphere sphere2(0.5, 10, 20);
-  //sphere obj(0.5, 20, 20);
-  //SolidSphere obj(0.5, 20, 3);
-  //WiredSphere obj(0.5, 20, 10);
-  //SolidCylinder obj(0.5, 1.0, 20);
-
-  //auto obj1  = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.50, 0.2, 20);
-  //auto obj2  = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::UnitZ()*0.25, 0.05, 0.5, 20);
-  //auto obj1  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.05, 0.02, 20);
-  //auto obj1  = std::make_shared<WiredCone>( Eigen::Vector3f::Zero(), 0.05, 0.05, 20);
   auto obj1  = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), 1, 1, 0.02);
   Vector3d pos_ = (Vector3d){0.0,0.0,-0.101};
   Matrix3d rot_ = Eigen::Matrix3d::Identity();
@@ -167,10 +154,7 @@ int main()
   auto obj31 = std::make_shared<WiredSphere>(0.020, 20, 20);
   auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
   //auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
-  //auto obj4  = ssg::ImportObject("./phoenix_ugv.md2");
   auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.005, 20);
-  //auto obj31 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::Zero()      , 0.20, 0.2, 20);
-  //auto obj32 = std::make_shared<WiredCylinder>(                                                             Eigen::Vector3f::UnitZ()*0.25, 0.05, 0.5, 20);
   obj1->SetTransformMatrixLocId(transformMatrixLocation);
   obj21->SetTransformMatrixLocId(transformMatrixLocation);
   obj22->SetTransformMatrixLocId(transformMatrixLocation);
@@ -187,9 +171,6 @@ int main()
   auto node2 = ssg::DrawableLink::Create("B", objs2, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.050,0.00}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
   auto node3 = ssg::DrawableLink::Create("C", objs3, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
   auto node4 = ssg::DrawableLink::Create("D", obj4,  RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
-  //node1->LPos() = Eigen::Vector3d(0.0,0.0,0.0);
-  //node2->LPos() = Eigen::Vector3d(0.0,0.0,0.10);
-  //node3->LPos() = Eigen::Vector3d(0.0,0.0,0.50);
   node3->AddChild(node4);
   node2->AddChild(node3);
   node1->AddChild(node2);
@@ -214,7 +195,7 @@ int main()
   Eigen::Vector3d cdir(0.2, 0.0, 0.0);
   Eigen::Vector3d cdir_left(0.0, 0.0, 0.0);
   Eigen::Vector3d cdir_to(0.0, 0.0, 0.0);
-  Eigen::Vector3d ctop_dir(0.2, 0.0, 1.0);
+  Eigen::Vector3d ctop_dir(0.0, 0.0, 1.0);
   GLfloat cdir_len = -2.0;
   GLfloat cyaw = 0.0;
 
@@ -226,11 +207,8 @@ int main()
   {
     static int count = 0;
     static GLfloat rad_tick = count / 100;
-    //GLfloat len = sqrt(pow(cdir[0], 2) + pow(cdir[1], 2) + pow(cdir[2], 2));
-    //GLfloat len = sqrt(pow(cdir(0), 2) + pow(cdir(1), 2) + pow(cdir(2), 2));
     GLfloat len = cdir.norm();
 
-    //vec3_cross_product(cdir, ctop_dir, cdir_left);
     cdir_left = cdir.cross(ctop_dir);
 
     if (glfwGetKey(window, GLFW_KEY_Q)) {
@@ -239,7 +217,6 @@ int main()
     if (glfwGetKey(window, GLFW_KEY_PAGE_UP)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
         for (size_t i = 0; i < 3; i++) {
-          //cpos[i] += veloc * ctop_dir[i];
           cpos(i) += veloc * ctop_dir(i);
         }
       } else {
@@ -249,7 +226,6 @@ int main()
     if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
         for (size_t i = 0; i < 3; i++) {
-          //cpos[i] += -veloc * ctop_dir[i];
           cpos(i) += -veloc * ctop_dir(i);
         }
       } else {
@@ -258,53 +234,34 @@ int main()
     }
     if (glfwGetKey(window, GLFW_KEY_UP)) {
       for (size_t i = 0; i < 3; i++) {
-        //cpos[i] += veloc * cdir[i] / len;
         cpos(i) += veloc * cdir(i) / len;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN)) {
       for (size_t i = 0; i < 3; i++) {
-        //cpos[i] -= veloc * cdir[i] / len;
         cpos(i) -= veloc * cdir(i) / len;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-      // TODO: cross product
-      for (size_t i = 0; i < 3; i++) {
-        //cpos[i] -= veloc * cdir_left[i] / len;
-        cpos(i) -= veloc * cdir_left(i) / len;
-      }
+      cpos -= veloc * cdir.cross(ctop_dir) / cdir.norm();
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-      // TODO: cross product
-      for (size_t i = 0; i < 3; i++) {
-        //cpos[i] += veloc * cdir_left[i] / len;
-        cpos(i) += veloc * cdir_left(i) / len;
-      }
+      cpos += veloc * cdir.cross(ctop_dir) / cdir.norm();
     }
 
-    //cdir[0] = cdir_len * cos(cyaw);
-    //cdir[1] = cdir_len * sin(cyaw);
-    //for (size_t i = 0; i < 3; i++) {
-    //  cdir_to[i] = cpos[i] + cdir[i];
-    //}
     cdir(0) = cdir_len * cos(cyaw);
     cdir(1) = cdir_len * sin(cyaw);
     cdir_to = cpos + cdir;
 
-    //lookAt(2.0f * cos(rad_tick), 2.0f * sin(rad_tick), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, temp0);
-    //Eigen::Vector3d cp = Eigen::Map<Eigen::Vector3f>(cpos, 3).cast<double>();
-    //Eigen::Vector3d cd = Eigen::Map<Eigen::Vector3f>(cdir_to, 3).cast<double>();
     Eigen::Matrix4d m =  ssg::lookAt(cpos, cdir_to);
-    std::cout << ssg::lookAt(cpos, cdir_to) << std::endl;
-    std::cout << "===" << std::endl;
+    //std::cout << ssg::lookAt(cpos, cdir_to) << std::endl;
+    //std::cout << "===" << std::endl;
 
-    //Eigen::Matrix4d projection_mat = ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1], cdir_to[2], 0.0f, 0.0f, 1.0f) * camera_mat;
     Eigen::Matrix4d projection_mat = ssg::lookAt(cpos, cdir_to) * camera_mat;
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
-    std::cout << ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1]    , cdir_to[2], 0.0f, 0.0f, 1.0f) << std::endl;
-    std::cout << "===========================" << std::endl;
+    //std::cout << ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1]    , cdir_to[2], 0.0f, 0.0f, 1.0f) << std::endl;
+    //std::cout << "===========================" << std::endl;
 
     //ウィンドウを消去する
     //glClear(GL_COLOR_BUFFER_BIT);
@@ -322,18 +279,7 @@ int main()
     //
     //ここで描画処理を行う
     //
-    //glBindVertexArray(object.vao);
-    //glDrawArrays(GL_TRIANGLE_STRIP, 0, object.count);
-    //glBindVertexArray(object.vao2);
-    //glDrawArrays(GL_TRIANGLE_STRIP, 0, object.count);
-    //glDrawArrays(GL_QUAD_STRIP, 0, object.count);
 
-    auto rot = Eigen::Matrix3d();
-    rot << 1,0,0,
-           0,0.9800665778412416, -0.19866933079506122,
-           0,0.19866933079506122, 0.9800665778412416;
-    //node.WPos() += Eigen::Vector3d(0,0,0.01);
-    //node3->LRot() *= rot;
     static Dp::Math::real rad = 0.00;
     static bool is_increase = false;
     if (is_increase) {
@@ -362,24 +308,16 @@ int main()
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);
-    //glfwSwapInterval(1);
 
-    //イベントを取り出す
-#ifdef __APPLE__
+    /* Get EVENT */
     /* non block */
     glfwPollEvents();
-#else
-    /* non block */
-    //glfwWaitEvents();
-    glfwPollEvents();
-#endif
 
     cmeasure.update();
 
     count++;
   }
 
-  //ssg::test();
   return 0;
 }
 
