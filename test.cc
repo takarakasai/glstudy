@@ -29,8 +29,6 @@
 using namespace Eigen;
 
 static GLfloat aspect_ratio = 0;
-static GLfloat size[2] = {0,0};
-static GLfloat dpm = 100.0;
 
 #define DPRINTF(...) 
 
@@ -79,8 +77,6 @@ void resize(GLFWwindow *const window, int width, int height)
 {
   printf("--> %d %d\n", width, height);
   aspect_ratio = (GLfloat)(width) / (GLfloat)(height);
-  size[0] = (GLfloat)(width);
-  size[1] = (GLfloat)(height);
   glViewport(0, 0, width, height);
 }
 
@@ -142,10 +138,6 @@ int main()
 
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
   const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
-  const GLint sizeLoc = glGetUniformLocation(program, "size");
-  const GLint dpmLoc = glGetUniformLocation(program, "dpm");
-  printf("sizeLoc : %d\n", sizeLoc);
-  printf("dpmLoc  : %d\n", dpmLoc);
 
   auto obj1  = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), 1, 1, 0.02);
   Vector3d pos_ = (Vector3d){0.0,0.0,-0.101};
@@ -276,8 +268,6 @@ int main()
     //glUniformMatrix4fv(transformMatrixLocation, 1, GL_FALSE, transformMatrix);
 
     //glUniform1f(aspectLoc, aspect_ratio);
-    glUniform2fv(sizeLoc, 1, size);
-    glUniform1f(dpmLoc, dpm);
 
     //
     //ここで描画処理を行う
