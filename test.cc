@@ -215,13 +215,8 @@ int main()
   Eigen::Vector3d cdir_left(0.0, 0.0, 0.0);
   Eigen::Vector3d cdir_to(0.0, 0.0, 0.0);
   Eigen::Vector3d ctop_dir(0.2, 0.0, 1.0);
-  //GLfloat cpos[3] = {+0.20, 0.0, 0.0};
   GLfloat cdir_len = -2.0;
   GLfloat cyaw = 0.0;
-  //GLfloat cdir[3] = {cdir_len, 0.0, 0.0};
-  //GLfloat cdir_left[3];
-  //GLfloat cdir_to[3] = {0.0};
-  //GLfloat ctop_dir[3] = {0.0, 0.0, 1.0};
 
   cycle_measure cmeasure(5);
   cmeasure.set_cout(true);
@@ -232,7 +227,8 @@ int main()
     static int count = 0;
     static GLfloat rad_tick = count / 100;
     //GLfloat len = sqrt(pow(cdir[0], 2) + pow(cdir[1], 2) + pow(cdir[2], 2));
-    GLfloat len = sqrt(pow(cdir(0), 2) + pow(cdir(1), 2) + pow(cdir(2), 2));
+    //GLfloat len = sqrt(pow(cdir(0), 2) + pow(cdir(1), 2) + pow(cdir(2), 2));
+    GLfloat len = cdir.norm();
 
     //vec3_cross_product(cdir, ctop_dir, cdir_left);
     cdir_left = cdir.cross(ctop_dir);
