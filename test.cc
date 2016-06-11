@@ -136,7 +136,9 @@ int main()
   glEnable(GL_DEPTH_TEST);
 
   //プログラムオブジェクトを作成する
-  const GLuint program = ssg::loadProgram("point.vert", {"pv", "normal"}, "point.frag", "fc");
+  const GLuint program = ssg::loadProgram(
+      "./shader/point.vert", {"pv", "normal"},
+      "./shader/point.frag", "fc");
 
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
   const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
@@ -188,6 +190,7 @@ int main()
     fprintf(stderr, "fail to load %s.\n", name.c_str());
     return 1;
   }
+
   node_1->SetTransformMatrixLocId(transformMatrixLocation);
 
   GLfloat veloc = 0.005;
