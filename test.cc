@@ -226,16 +226,6 @@ int main()
   Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
 
   GLfloat veloc = 0.005;
-  Eigen::Vector3d cpos_def(0.2, 0.0, 0.0);
-  Eigen::Vector3d cpos = cpos_def;
-  Eigen::Vector3d cdir(0.2, 0.0, 0.0);
-  Eigen::Vector3d cdir_left(0.0, 0.0, 0.0);
-  Eigen::Vector3d cdir_to(0.0, 0.0, 0.0);
-  Eigen::Vector3d ctop_dir(0.0, 0.0, 1.0);
-  GLfloat cdir_len = -2.0;
-  GLfloat croll = 0.0;
-  GLfloat cpitch = 0.0;
-  GLfloat cyaw = 0.0;
 
   cycle_measure cmeasure(5);
   cmeasure.set_cout(true);
@@ -244,59 +234,40 @@ int main()
   while (glfwWindowShouldClose(window) == GL_FALSE)
   {
     static int count = 0;
-    GLfloat len = cdir.norm();
-
-    cdir_left = cdir.cross(ctop_dir);
 
     if (glfwGetKey(window, GLFW_KEY_Q)) {
       break;
     }
     if (glfwGetKey(window, GLFW_KEY_PAGE_UP)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
-        for (size_t i = 0; i < 3; i++) {
-          cpos(i) += veloc * ctop_dir(i);
-          camera.Rotate(0.0, 0.05, 0.0);
-        }
+        camera.Rotate(0.0, 0.05, 0.0);
       } else {
-        cyaw += 0.05;
         camera.Rotate(0.0, 0.0, 0.05);
       }
     }
     if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
-        for (size_t i = 0; i < 3; i++) {
-          cpos(i) += -veloc * ctop_dir(i);
-          camera.Rotate(0.0, -0.05, 0.0);
-        }
+        camera.Rotate(0.0, -0.05, 0.0);
       } else {
-        cyaw -= 0.05;
         camera.Rotate(0.0, 0.0, -0.05);
       }
     }
     if (glfwGetKey(window, GLFW_KEY_UP)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
       } else {
-        for (size_t i = 0; i < 3; i++) {
-          cpos(i) += veloc * cdir(i) / len;
-        }
         camera += veloc;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
       } else {
-        for (size_t i = 0; i < 3; i++) {
-          cpos(i) -= veloc * cdir(i) / len;
-        }
         camera -= veloc;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-      cpos -= veloc * cdir.cross(ctop_dir) / cdir.norm();
       camera += camera.LeftDir() * veloc;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-      cpos += veloc * cdir.cross(ctop_dir) / cdir.norm();
       camera -= camera.LeftDir() * veloc;
     }
     if (glfwGetKey(window, GLFW_KEY_W)) {
@@ -305,10 +276,6 @@ int main()
     if (glfwGetKey(window, GLFW_KEY_S)) {
       node_1->SetDrawMode(true);
     }
-
-    cdir(0) = cdir_len * cos(cyaw);
-    cdir(1) = cdir_len * sin(cyaw);
-    cdir_to = cpos + cdir;
 
     /*
      * OpenGL shall treat matrix as row-first rule
@@ -322,7 +289,6 @@ int main()
     Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
-    //std::cout << ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1]    , cdir_to[2], 0.0f, 0.0f, 1.0f) << std::endl;
     //std::cout << "===========================" << std::endl;
 
     glfwMakeContextCurrent(window);
