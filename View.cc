@@ -7,8 +7,8 @@
 
 namespace ssg {
 
-  Eigen::Matrix4d cameraMatrix(Dp::Math::real fovy, Dp::Math::real aspect,
-                               Dp::Math::real near, Dp::Math::real far) {
+  Eigen::Matrix4d cameraPerspectiveMatrix(Dp::Math::real fovy, Dp::Math::real aspect,
+                                          Dp::Math::real near, Dp::Math::real far) {
       Dp::Math::real f  = 1.0 / tanf(Dp::Math::deg2rad(fovy * 0.5));
       Dp::Math::real dz = far - near;
 
@@ -18,6 +18,20 @@ namespace ssg {
                  0.0,   f,              0.0,  0.0,
                  0.0, 0.0,   -(far+near)/dz, -1.0,
                  0.0, 0.0, -2.0*far*near/dz,  0.0;
+
+      return cmat;
+  }
+
+  Eigen::Matrix4d cameraParallelMatrix(Dp::Math::real width, Dp::Math::real aspect,
+                                       Dp::Math::real near, Dp::Math::real far) {
+      Dp::Math::real dz = far - near;
+
+      Eigen::Matrix4d cmat;
+      cmat <<
+           2.0 / width,                  0.0,              0.0,  0.0,
+                   0.0, 2.0 / width * aspect,              0.0,  0.0,
+                   0.0,                  0.0,          -2.0/dz,  0.0,
+                   0.0,                  0.0,   -(far+near)/dz,  1.0;
 
       return cmat;
   }

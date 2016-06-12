@@ -54,7 +54,6 @@ void cb_resize(GLFWwindow *const window, int width, int height)
 
 int main()
 {
-  GLFWwindow* window;
   glfwSetErrorCallback(error_callback);
   if (!glfwInit())
       exit(EXIT_FAILURE);
@@ -64,12 +63,15 @@ int main()
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  //glfwWindowHint(GLFW_DECORATED ,false);
 
-  Eigen::Matrix4d camera_mat = ssg::cameraMatrix(90.0, 1.0, 0.05, 2.0);
+  //Eigen::Matrix4d camera_mat = ssg::cameraMatrix(90.0, 1.0, 0.05, 2.0);
 
   GLuint width = 640;
   GLuint height = 480;
-  window = glfwCreateWindow(width, height, "Simple example", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(width, height, "Simple example", NULL, NULL);
+  //GLFWwindow* window2 = glfwCreateWindow(width, height, "Window2", NULL, window);
+  //GLFWwindow* window3 = glfwCreateWindow(width, height, "Window3", NULL, NULL);
   if (!window)
   {
       glfwTerminate();
@@ -105,8 +107,11 @@ int main()
       "./shader/point.vert", {"pv", "normal"},
       "./shader/point.frag", "fc");
 
+  std::cout << program << ":PROGRAM" << std::endl;
+
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
   const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
+
 
   auto obj1  = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), 1, 1, 0.02);
   Vector3d pos_ = (Vector3d){0.0,0.0,-0.101};
@@ -145,22 +150,91 @@ int main()
   node2->LRot() *= rot;
   node3->LRot() *= rot;
 
+
   std::string name = "./obj/eV/eV.obj";
   auto node_1 = ssg::test2(name);
   if (node_1 == NULL) {
     fprintf(stderr, "fail to load %s.\n", name.c_str());
     return 1;
   }
-
   node_1->SetTransformMatrixLocId(transformMatrixLocation);
 
+  class Camera {
+    typedef Dp::Math::real Real;
+  private:
+    Eigen::Vector3d pos;
+    Eigen::Vector3d dir_to;
+    Eigen::Vector3d top;
+
+  public:
+    Camera(Real px, Real py, Real pz,
+           Real dx, Real dy, Real dz,
+           Real tx, Real ty, Real tz):
+      pos(px, py, pz), dir_to(dx, dy, dz), top(tx, ty, tz) {
+    }
+    virtual ~Camera() {};
+
+    Eigen::Vector3d Dir() {
+      return dir_to - pos;
+    }
+
+    Eigen::Vector3d LeftDir() {
+      return top.cross(Dir());
+    }
+
+    Eigen::Matrix4d LookAtMatrix() {
+      //std::cout << "POS:" <<  pos << std::endl;
+      //std::cout << "DIR:" <<  dir_to << std::endl;
+      return ssg::lookAt(pos, dir_to, top);
+    }
+
+    Camera& operator+=(Real dpos) {
+      Eigen::Vector3d dir = Dir();
+      std::cout << "DIR:" <<  dir << "   :" << dpos << std::endl;
+      pos += dir * dpos;
+      dir_to += dir * dpos;
+      return (*this);
+    }
+
+    Camera& operator-=(Real dpos) {
+      Eigen::Vector3d dir = Dir();
+      pos -= dir * dpos;
+      dir_to -= dir * dpos;
+      return (*this);
+    }
+
+    Camera& operator+=(Eigen::Vector3d dpos) {
+      pos += dpos;
+      dir_to += dpos;
+      return (*this);
+    }
+
+    Camera& operator-=(Eigen::Vector3d dpos) {
+      pos -= dpos;
+      dir_to -= dpos;
+      return (*this);
+    }
+
+    void Rotate(Real r, Real p, Real y) {
+      Eigen::Vector3d rpy(r, p, y);
+      Eigen::Vector3d dir = Dir();
+      dir_to = Dp::Math::rpy2mat3(rpy) * dir + pos;
+      return;
+    }
+  };
+
+  Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
+
   GLfloat veloc = 0.005;
-  Eigen::Vector3d cpos(0.2, 0.0, 0.0);
+  Eigen::Vector3d cpos_def(0.2, 0.0, 0.0);
+  Eigen::Vector3d cpos = cpos_def;
   Eigen::Vector3d cdir(0.2, 0.0, 0.0);
   Eigen::Vector3d cdir_left(0.0, 0.0, 0.0);
   Eigen::Vector3d cdir_to(0.0, 0.0, 0.0);
   Eigen::Vector3d ctop_dir(0.0, 0.0, 1.0);
   GLfloat cdir_len = -2.0;
+  GLfloat croll = 0.0;
+  GLfloat cpitch = 0.0;
   GLfloat cyaw = 0.0;
 
   cycle_measure cmeasure(5);
@@ -181,35 +255,49 @@ int main()
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
         for (size_t i = 0; i < 3; i++) {
           cpos(i) += veloc * ctop_dir(i);
+          camera.Rotate(0.0, 0.05, 0.0);
         }
       } else {
         cyaw += 0.05;
+        camera.Rotate(0.0, 0.0, 0.05);
       }
     }
     if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN)) {
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
         for (size_t i = 0; i < 3; i++) {
           cpos(i) += -veloc * ctop_dir(i);
+          camera.Rotate(0.0, -0.05, 0.0);
         }
       } else {
         cyaw -= 0.05;
+        camera.Rotate(0.0, 0.0, -0.05);
       }
     }
     if (glfwGetKey(window, GLFW_KEY_UP)) {
-      for (size_t i = 0; i < 3; i++) {
-        cpos(i) += veloc * cdir(i) / len;
+      if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
+      } else {
+        for (size_t i = 0; i < 3; i++) {
+          cpos(i) += veloc * cdir(i) / len;
+        }
+        camera += veloc;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN)) {
-      for (size_t i = 0; i < 3; i++) {
-        cpos(i) -= veloc * cdir(i) / len;
+      if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
+      } else {
+        for (size_t i = 0; i < 3; i++) {
+          cpos(i) -= veloc * cdir(i) / len;
+        }
+        camera -= veloc;
       }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT)) {
       cpos -= veloc * cdir.cross(ctop_dir) / cdir.norm();
+      camera += camera.LeftDir() * veloc;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
       cpos += veloc * cdir.cross(ctop_dir) / cdir.norm();
+      camera -= camera.LeftDir() * veloc;
     }
     if (glfwGetKey(window, GLFW_KEY_W)) {
       node_1->SetDrawMode(false);
@@ -228,11 +316,16 @@ int main()
      * So you should make transpose matrix
      */
     GLfloat projectionMatrix[16];
-    Eigen::Matrix4d projection_mat = ssg::lookAt(cpos, cdir_to) * camera_mat;
+    Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
+    //auto diff = 1.0 + (cpos.norm() - cpos_def.norm());
+    //Eigen::Matrix4d camera_mat = ssg::cameraParallelMatrix(0.4 * diff, 1.0, 0.05, 2.0);
+    Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
     //std::cout << ssg::lookAt(cpos[0], cpos[1], cpos[2], cdir_to[0], cdir_to[1]    , cdir_to[2], 0.0f, 0.0f, 1.0f) << std::endl;
     //std::cout << "===========================" << std::endl;
+
+    glfwMakeContextCurrent(window);
 
     //ウィンドウを消去する
     //glClear(GL_COLOR_BUFFER_BIT);

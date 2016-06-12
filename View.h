@@ -18,14 +18,17 @@
 namespace ssg {
 
   void cameraMatrix(float fovy, float aspect, float near, float far, GLfloat *matrix);
- 
+
   void lookAt(float ex, float ey, float ez,
               float tx, float ty, float tz,
               float ux, float uy, float uz,
               GLfloat *matrix);
 
-  Eigen::Matrix4d cameraMatrix(Dp::Math::real fovy, Dp::Math::real aspect,
-                               Dp::Math::real near, Dp::Math::real far);
+  Eigen::Matrix4d cameraPerspectiveMatrix(Dp::Math::real fovy, Dp::Math::real aspect,
+                                          Dp::Math::real near, Dp::Math::real far);
+
+  Eigen::Matrix4d cameraParallelMatrix(Dp::Math::real width, Dp::Math::real aspect,
+                                       Dp::Math::real near, Dp::Math::real far);
 
   Eigen::Matrix4d lookAt(
           Eigen::Vector3d camera_pos,

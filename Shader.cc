@@ -186,5 +186,20 @@ namespace ssg {
     // 作成したプログラムオブジェクトを返す
     return program;
   }
+
+  errno_t loadProgram2 (GLuint program, const char *vert, const std::list<std::string> &attrs, const char *frag, const char *fc) {
+    //シェーダのソースファイルを読み込む
+    const GLchar *vsrc = (readShaderSource(vert));
+    const GLchar *fsrc = (readShaderSource(frag));
+    // プログラムオブジェクトを作成する
+    program = (createProgram(vsrc, attrs, fsrc, fc));
+    // 読み込みに使ったメモリを解放する
+    free((GLchar*)vsrc);
+    free((GLchar*)fsrc);
+    //delete vsrc;
+    //delete fsrc;
+    // 作成したプログラムオブジェクトを返す
+    return 0;
+  }
 }
 
