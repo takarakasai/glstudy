@@ -7,7 +7,7 @@ void main()
   //fc = vec4(diffuseColor, 1.0);
 
   vec3 lightColor  = vec3(1.0, 1.0, 1.0);
-  vec3 lightPos    = vec3(2.0, 2.0, 2.0);
+  vec3 lightPos    = vec3(0.0, 0.0, 5.0);
   vec4 objectColor = vec4(0.0, 0.5, 0.0, 0.5);
   vec3 viewPos     = vec3(2.0, 0.0, 0.0);
 

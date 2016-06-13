@@ -30,9 +30,9 @@ namespace ssg {
             Eigen::Vector3f(pPos->x, pPos->y, pPos->z),
             Eigen::Vector3f(pNormal->x, pNormal->y, pNormal->z),
             Eigen::Vector2f(pTexCoord->x, pTexCoord->y));
-        //printf("%+7.2lf, %+7.2lf, %+7.2lf : %+7.2lf, %+7.2lf || %+7.2lf, %+7.2lf, %+7.2lf -- %s\n",
-        //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
-        //  paiMesh->HasTextureCoords(0) ? "True" : "False");
+        printf("%+7.2lf, %+7.2lf, %+7.2lf : %+7.2lf, %+7.2lf || %+7.2lf, %+7.2lf, %+7.2lf -- %s\n",
+          pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
+          paiMesh->HasTextureCoords(0) ? "True" : "False");
       }
       vertices_.rotate(rot);
   
@@ -47,7 +47,8 @@ namespace ssg {
         indices_.push_back(Face.mIndices[2]);
       }
   
-      BuildObject();
+      //BuildObject();
+      BuildObject(GL_LINE_STRIP);
     }
 
     UniMesh (const aiMesh* paiMesh) :UniMesh(Eigen::Matrix3f::Identity(), paiMesh){}

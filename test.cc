@@ -159,6 +159,11 @@ int main()
   }
   node_1->SetTransformMatrixLocId(transformMatrixLocation);
 
+  auto field = ssg::ImportObject("obj/field/ring_assy.stl");
+  //obj1->SetOffset(pos_, rot_);
+  field->SetScale(0.001);
+  field->SetTransformMatrixLocId(transformMatrixLocation);
+
   class Camera {
     typedef Dp::Math::real Real;
   private:
@@ -225,7 +230,7 @@ int main()
 
   Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
 
-  GLfloat veloc = 0.005;
+  GLfloat veloc = 0.02;
 
   cycle_measure cmeasure(5);
   cmeasure.set_cout(true);
@@ -333,6 +338,12 @@ int main()
     //node_1->FindJoint("FR_KNEE_PITCH")->SetValue( rad + Dp::Math::deg2rad(90));
     node_1->UpdateCasCoords();
     node_1->ExecAll();
+
+    {
+      Vector3d pos_ = (Vector3d){0.0,0.0,-0.100};
+      Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
+      field->Draw(rot_, pos_);
+    }
 
     //カラーバッファを入れ替える
     glfwSwapBuffers(window);
