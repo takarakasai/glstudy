@@ -157,6 +157,12 @@ int main()
       return ssg::lookAt(pos, dir_to, top);
     }
 
+    Eigen::Matrix4d ProjectionMatrix() {
+      Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
+      Eigen::Matrix4d projection_mat = LookAtMatrix() * camera_mat;
+      return projection_mat;
+    }
+
     Camera& operator+=(Real dpos) {
       Eigen::Vector3d dir = Dir();
       std::cout << "DIR:" <<  dir << "   :" << dpos << std::endl;
@@ -252,11 +258,10 @@ int main()
      * So you should make transpose matrix
      */
     GLfloat projectionMatrix[16];
-    Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
-    //auto diff = 1.0 + (cpos.norm() - cpos_def.norm());
-    //Eigen::Matrix4d camera_mat = ssg::cameraParallelMatrix(0.4 * diff, 1.0, 0.05, 2.0);
-    Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
-    Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
+    //Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
+    //Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
+    //Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
+    Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = camera.ProjectionMatrix().transpose().cast<GLfloat>();
 
     glfwMakeContextCurrent(window);
 
