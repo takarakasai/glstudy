@@ -146,6 +146,9 @@ public:
   virtual void SetTransformMatrixLocId (int32_t id) {
     return;
   }
+  virtual void SetMaterialColorLocId (int32_t id) {
+    return;
+  }
   virtual void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
     std::cout << "  ERROR-------------------------------\n";
     return;

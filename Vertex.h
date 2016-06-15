@@ -51,6 +51,12 @@ namespace ssg {
         norm = rot * norm;
       }
     }
+
+    void scale (Dp::Math::real scale) {
+      for (auto &pose: poses) {
+        pose = pose * scale;
+      }
+    }
   
   } Vertices;
   

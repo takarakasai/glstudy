@@ -190,6 +190,46 @@ namespace ssg {
       return result != cases.end() ? result->second(ifs, link) : EINVAL ;
   }
 
+  static errno_t parseColor (InterfaceSceneObject& shape, std::ifstream &ifs) {
+    std::cout << "  : parse Color\n";
+
+    Eigen::Vector4d color;
+    ifs >> color(0);
+    ifs >> color(1);
+    ifs >> color(2);
+    ifs >> color(3);
+
+    std::cout << "  :::" << color << std::endl;
+
+    ECALL(shape.SetColor(color));
+
+    return 0;
+  }
+
+  static errno_t parseShapeAttribute (std::string &attr_type, InterfaceSceneObject& shape, std::ifstream &ifs) {
+      static const std::unordered_map<std::string, std::function<errno_t(InterfaceSceneObject&, std::ifstream&)>> cases = {
+        {"Color"         , [](InterfaceSceneObject& shape, std::ifstream &ifs){return parseColor(shape, ifs);         }}
+      };
+      auto result = cases.find(attr_type);
+      /* TODO */
+      return result != cases.end() ? result->second(shape, ifs) : EINVAL ;
+  }
+
+  static errno_t parseShapeAttributes (InterfaceSceneObject &shape, std::ifstream &ifs) {
+
+    while(1)
+    {
+      std::string str;
+      ifs >> str;
+      std::cout << "===: " << str << std::endl;
+      if (ifs.eof()) break;
+
+      parseShapeAttribute(str, shape, ifs);
+    }
+
+    return 0;
+  }
+
   static std::list<std::shared_ptr<InterfaceSceneObject>> parseCompound (std::ifstream &ifs) {
     std::cout << "  : Shape Compound\n";
 
@@ -249,6 +289,8 @@ namespace ssg {
     auto shape = std::make_shared<Cylinder>(
       Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){1,0,0}).toRotationMatrix(),  Eigen::Vector3f::Zero(), radius, height, (size_t)20);
 
+    parseShapeAttributes(*shape, ifs);
+
     shapes.push_back(shape);
 
     return shapes;
@@ -268,6 +310,8 @@ namespace ssg {
         Eigen::AngleAxisf(Dp::Math::deg2rad(0), (Vector3f){0,0,0}).toRotationMatrix(),
         Eigen::Vector3f::Zero(), lx, ly, (float)lz);
     //auto shape = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), lx, ly, lz);
+
+    parseShapeAttributes(*shape, ifs);
 
     shapes.push_back(shape);
 

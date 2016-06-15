@@ -15,7 +15,11 @@
 
 //using namespace Eigen;
 
-#define DPRINTF(...) 
+#if defined(_DEBUG)
+#define DPRINTF(...) printf(__VA_ARGS__)
+#else
+#define DPRINTF(...)
+#endif
 
 /*
  *  pn : patitioning number

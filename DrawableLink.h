@@ -86,6 +86,15 @@ namespace ssg {
       }
     }
 
+    void SetMaterialColorLocId (int32_t id) {
+      for (auto &obj : objs_) {
+        obj->SetMaterialColorLocId(id);
+      }
+      for (auto &link : clinks_) {
+        link->SetMaterialColorLocId(id);
+      }
+    }
+
     void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
       objs_.push_back(obj);
     }
@@ -96,7 +105,6 @@ namespace ssg {
 
   public:
     errno_t Exec(void) {
-      auto tmp = CasCoords::WPos();
       for (auto &obj : objs_) {
         obj->Draw(CasCoords::WRot(), CasCoords::WPos());
       }

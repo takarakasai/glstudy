@@ -37,7 +37,7 @@ static void error_callback(int error, const char* description)
     fputs(description, stderr);
 }
 
-#ifdef __linux__
+#if 0
 [[maybe_unused]] static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -101,6 +101,7 @@ int main()
 
   // hidden surface
   glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LEQUAL);
 
   //プログラムオブジェクトを作成する
   const GLuint program = ssg::loadProgram(
@@ -111,45 +112,7 @@ int main()
 
   const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
   const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
-
-
-  auto obj1  = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), 1, 1, 0.02);
-  Vector3d pos_ = (Vector3d){0.0,0.0,-0.101};
-  Matrix3d rot_ = Eigen::Matrix3d::Identity();
-  obj1->SetOffset(pos_, rot_);
-  auto obj21 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){0,1,0}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.02, 6);
-  auto obj22 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
-  auto obj31 = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.020, 20, 20);
-  auto obj32 = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(),  Eigen::Vector3f::UnitZ()*0.025, 0.005, 0.05, 20);
-  //auto obj4  = ssg::ImportObject("./obj/stl/test.stl");
-  auto obj4  = std::make_shared<WiredCylinder>(Eigen::AngleAxisf(Dp::Math::deg2rad( 0), (Vector3f){0,0,1}).toRotationMatrix(), Eigen::Vector3f::Zero()      , 0.02, 0.005, 20);
-  obj1->SetTransformMatrixLocId(transformMatrixLocation);
-  obj21->SetTransformMatrixLocId(transformMatrixLocation);
-  obj22->SetTransformMatrixLocId(transformMatrixLocation);
-  obj31->SetTransformMatrixLocId(transformMatrixLocation);
-  obj32->SetTransformMatrixLocId(transformMatrixLocation);
-  obj4->SetTransformMatrixLocId(transformMatrixLocation);
-  std::list<std::shared_ptr<InterfaceSceneObject>> objs3;
-  objs3.push_back(obj31);
-  objs3.push_back(obj32);
-  std::list<std::shared_ptr<InterfaceSceneObject>> objs2;
-  objs2.push_back(obj21);
-  objs2.push_back(obj22);
-  auto node1 = ssg::DrawableLink::Create("A", obj1,  RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.00}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
-  auto node2 = ssg::DrawableLink::Create("B", objs2, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.050,0.00}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
-  auto node3 = ssg::DrawableLink::Create("C", objs3, RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
-  auto node4 = ssg::DrawableLink::Create("D", obj4,  RotaryJoint::Create("01", Vector3d::UnitX()), (Vector3d){0,0.000,0.05}, 1, (Vector3d){0,0,0}, Matrix3d::Identity());
-  node3->AddChild(node4);
-  node2->AddChild(node3);
-  node1->AddChild(node2);
-
-  auto rot = Eigen::Matrix3d();
-  rot << 1,0,0,
-         0,0.9800665778412416, -0.19866933079506122,
-         0,0.19866933079506122, 0.9800665778412416;
-  node2->LRot() *= rot;
-  node3->LRot() *= rot;
-
+  const GLint materialColorLocation = glGetUniformLocation(program, "materialColor");
 
   std::string name = "./obj/eV/eV.obj";
   auto node_1 = ssg::test2(name);
@@ -158,11 +121,12 @@ int main()
     return 1;
   }
   node_1->SetTransformMatrixLocId(transformMatrixLocation);
+  node_1->SetMaterialColorLocId(materialColorLocation);
 
-  auto field = ssg::ImportObject("obj/field/ring_assy.stl");
+  auto field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001);
   //obj1->SetOffset(pos_, rot_);
-  field->SetScale(0.001);
   field->SetTransformMatrixLocId(transformMatrixLocation);
+  field->SetMaterialColorLocId(materialColorLocation);
 
   class Camera {
     typedef Dp::Math::real Real;
@@ -326,13 +290,8 @@ int main()
         is_increase = true;
       }
     }
-    node2->GetJoint().SetValue(-rad + Dp::Math::deg2rad(-120));
-    node3->GetJoint().SetValue(rad + Dp::Math::deg2rad(-60));
-    //obj1->SetScale(1.0 + 10 * Dp::Math::rad2deg(rad) / 30);
-    //obj1->SetScale(10 * rad / Dp::Math::deg2rad(60));
-    node1->UpdateCasCoords();
-    node1->ExecAll();
-
+    GLfloat color1[4] = {0.5, 0.5, 0.5, 1.0};
+    glUniform4fv(materialColorLocation, 1, color1);
 
     //node_1->FindJoint("FR_HIP_PITCH")->SetValue(-rad + Dp::Math::deg2rad( 0));
     //node_1->FindJoint("FR_KNEE_PITCH")->SetValue( rad + Dp::Math::deg2rad(90));
@@ -340,7 +299,7 @@ int main()
     node_1->ExecAll();
 
     {
-      Vector3d pos_ = (Vector3d){0.0,0.0,-0.100};
+      Vector3d pos_ = (Vector3d){0.0,0.0,-0.200};
       Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
       field->Draw(rot_, pos_);
     }

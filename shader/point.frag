@@ -1,28 +1,33 @@
 #version 150 core
-in vec3 f_pos;
+in vec4 f_pos;
 in vec3 f_normal;
+uniform vec4 materialColor;
 out vec4 fc;
 void main()
 {
   //fc = vec4(diffuseColor, 1.0);
 
-  vec3 lightColor  = vec3(1.0, 1.0, 1.0);
-  vec3 lightPos    = vec3(0.0, 0.0, 5.0);
-  vec4 objectColor = vec4(0.0, 0.5, 0.0, 0.5);
+  vec4 lightColor  = vec4(1.0, 1.0, 1.0, 1.0);
+  vec4 lightPos    = vec4(5.0, 5.0, 5.0, 1.0);
+  vec4 objectColor = materialColor;
   vec3 viewPos     = vec3(2.0, 0.0, 0.0);
 
   // ambient
   float ambientStrength = 0.5f;
-  vec3 ambient = ambientStrength * lightColor;
+  vec3 ambient = ambientStrength * lightColor.xyz;
 
   // Diffuse
   float diffuseStrength = 1.0f;
-  vec3 lightDir = normalize(lightPos - f_pos);
-  float diff = max(dot(f_normal, lightDir), 0.0);
-  vec3 diffuse = diffuseStrength * diff * lightColor;
+  vec3 norm = normalize(f_normal);
+  vec3 lightDir = normalize(lightPos - f_pos).xyz;
+  float diff = max(dot(norm, lightDir), 0.0);
+  vec3 diffuse = diffuseStrength * diff * lightColor.xyz;
 
   // TODO: specular
+  vec3 view = -normalize(f_pos.xyz);
+  vec3 halfv = normalize(lightDir + view);
+  vec3 specular = pow(max(dot(normalize(halfv), normalize(lightDir)), 0.0), 20/*shininess*/) * lightColor.xyz;
 
-  vec3 xyz = (ambient + diffuse) * objectColor.xyz;
+  vec3 xyz = (ambient + diffuse + specular) * objectColor.xyz;
   fc = vec4(xyz, objectColor.a);
 }

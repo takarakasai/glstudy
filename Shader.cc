@@ -154,8 +154,9 @@ namespace ssg {
     //プログラムオブジェクトをリンクする
     GLuint idx = 0;
     for (auto &attr : attrs) {
-      glBindAttribLocation(program, idx++, attr.c_str());
+      glBindAttribLocation(program, idx, attr.c_str());
       printf("glBindAttribLocation: %u %u %s\n", program, idx, attr.c_str());
+      idx++;
     }
     //glBindAttribLocation(program, 0, pv);
     glBindFragDataLocation(program, 0, fc);

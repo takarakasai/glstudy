@@ -418,9 +418,17 @@ public:
     }
   }
 
+  /* TODO to be removed */
   errno_t SetTransformMatrixLocId (GLint id) {
     ECALL(wired_.SetTransformMatrixLocId(id));
     ECALL(solid_.SetTransformMatrixLocId(id));
+    return 0;
+  }
+
+  /* TODO to be removed */
+  errno_t SetMaterialColorLocId (GLint id) {
+    ECALL(wired_.SetMaterialColorLocId(id));
+    ECALL(solid_.SetMaterialColorLocId(id));
     return 0;
   }
 
@@ -430,9 +438,15 @@ public:
     return 0;
   }
 
-  errno_t SetScale(Dp::Math::real scale) {
-    ECALL(wired_.SetScale(scale));
-    ECALL(solid_.SetScale(scale));
+  //errno_t SetScale(Dp::Math::real scale) {
+  //  ECALL(wired_.SetScale(scale));
+  //  ECALL(solid_.SetScale(scale));
+  //  return 0;
+  //}
+
+  errno_t SetColor(Eigen::Vector4d& color) {
+    ECALL(wired_.SetColor(color));
+    ECALL(solid_.SetColor(color));
     return 0;
   }
 
