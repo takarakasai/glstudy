@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "dp_type.h"
+#include "View.h"
 
 namespace ssg {
 

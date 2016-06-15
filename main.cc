@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h> //#include <cstdlib>
-//#include <iostream>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -9,24 +9,16 @@
 
 #include "cycle_measure.h"
 
-#include <list>
 #include <string>
 
 #include "dp_type.h"
 
 #include "Link.h"
 #include "Shader.h"
-#include "View.h"
-//#include "Mesh.h"
-//#include "PrimitiveObject.h"
 
-#include "DrawableLink.h"
+//#include "DrawableLink.h"
 #include "ObjFileReader.h"
 #include "Camera.h"
-
-using namespace Eigen;
-
-static GLfloat aspect_ratio = 0;
 
 #define DPRINTF(...) 
 
@@ -45,8 +37,6 @@ static void error_callback(int error, const char* description)
 
 void cb_resize(GLFWwindow *const window, int width, int height)
 {
-  printf("--> %d %d\n", width, height);
-  aspect_ratio = (GLfloat)(width) / (GLfloat)(height);
   glViewport(0, 0, width, height);
 }
 
@@ -62,8 +52,6 @@ int main()
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   //glfwWindowHint(GLFW_DECORATED ,false);
-
-  //Eigen::Matrix4d camera_mat = ssg::cameraMatrix(90.0, 1.0, 0.05, 2.0);
 
   GLuint width = 640;
   GLuint height = 480;
