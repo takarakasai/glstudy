@@ -1,7 +1,11 @@
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 2.8)
 
+if(APPLE)
 set(CMAKE_CXX_COMPILER /usr/bin/clang++)
+else()
+set(CMAKE_CXX_COMPILER g++)
+endif()
 
 add_definitions(-std=c++11 -Wall)
 
@@ -14,11 +18,13 @@ include_directories(
 
 if(APPLE)
   find_library( OpenGL_LIBRARY OpenGL )
-  set(EXTRA_LIBS ${OpenGL_LIBRARY})
-endif(APPLE)
+  set(EXTRA_LIBS glfw3 ${OpenGL_LIBRARY})
+else()
+  set(EXTRA_LIBS glfw GL)
+endif()
 
 link_libraries(
-  glfw3 GLEW ${EXTRA_LIBS} assimp
+  GLEW ${EXTRA_LIBS} assimp
 )
 
 if(LINUX)
