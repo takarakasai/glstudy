@@ -258,43 +258,15 @@ int main()
     Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
 
-    //std::cout << "===========================" << std::endl;
-
     glfwMakeContextCurrent(window);
 
-    //ウィンドウを消去する
-    //glClear(GL_COLOR_BUFFER_BIT);
+    // clear window
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //シェーダプログラムの使用開始
+    // start using shader program
     glUseProgram(program);
 
     glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, projectionMatrix);
-    //glUniformMatrix4fv(transformMatrixLocation, 1, GL_FALSE, transformMatrix);
 
-    //glUniform1f(aspectLoc, aspect_ratio);
-
-    //
-    //ここで描画処理を行う
-    //
-
-    static Dp::Math::real rad = 0.00;
-    static bool is_increase = false;
-    if (is_increase) {
-      rad += 0.02;
-      if (rad > Dp::Math::deg2rad(30)) {
-        is_increase = false;
-      }
-    } else {
-      rad -= 0.02;
-      if (rad < Dp::Math::deg2rad(-30)) {
-        is_increase = true;
-      }
-    }
-    GLfloat color1[4] = {0.5, 0.5, 0.5, 1.0};
-    glUniform4fv(materialColorLocation, 1, color1);
-
-    //node_1->FindJoint("FR_HIP_PITCH")->SetValue(-rad + Dp::Math::deg2rad( 0));
-    //node_1->FindJoint("FR_KNEE_PITCH")->SetValue( rad + Dp::Math::deg2rad(90));
     node_1->UpdateCasCoords();
     node_1->ExecAll();
 
@@ -304,7 +276,6 @@ int main()
       field->Draw(rot_, pos_);
     }
 
-    //カラーバッファを入れ替える
     glfwSwapBuffers(window);
 
     /* Get EVENT */
