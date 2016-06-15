@@ -8,6 +8,7 @@
 
 #include "dp_type.h"
 
+#include "PrimitiveObject.h"
 #include "Link.h"
 #include "DrawableLink.h"
 

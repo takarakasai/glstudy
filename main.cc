@@ -17,14 +17,12 @@
 #include "Link.h"
 #include "Shader.h"
 #include "View.h"
-//#include "VertexObject.h"
-//#include "Vertex.h"
-//#include "Utils.h"
-#include "Mesh.h"
-#include "PrimitiveObject.h"
+//#include "Mesh.h"
+//#include "PrimitiveObject.h"
 
 #include "DrawableLink.h"
 #include "ObjFileReader.h"
+#include "Camera.h"
 
 using namespace Eigen;
 
@@ -128,77 +126,7 @@ int main()
   field->SetTransformMatrixLocId(transformMatrixLocation);
   field->SetMaterialColorLocId(materialColorLocation);
 
-  class Camera {
-    typedef Dp::Math::real Real;
-  private:
-    Eigen::Vector3d pos;
-    Eigen::Vector3d dir_to;
-    Eigen::Vector3d top;
-
-  public:
-    Camera(Real px, Real py, Real pz,
-           Real dx, Real dy, Real dz,
-           Real tx, Real ty, Real tz):
-      pos(px, py, pz), dir_to(dx, dy, dz), top(tx, ty, tz) {
-    }
-    virtual ~Camera() {};
-
-    Eigen::Vector3d Dir() {
-      return dir_to - pos;
-    }
-
-    Eigen::Vector3d LeftDir() {
-      return top.cross(Dir());
-    }
-
-    Eigen::Matrix4d LookAtMatrix() {
-      //std::cout << "POS:" <<  pos << std::endl;
-      //std::cout << "DIR:" <<  dir_to << std::endl;
-      return ssg::lookAt(pos, dir_to, top);
-    }
-
-    Eigen::Matrix4d ProjectionMatrix() {
-      Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
-      Eigen::Matrix4d projection_mat = LookAtMatrix() * camera_mat;
-      return projection_mat;
-    }
-
-    Camera& operator+=(Real dpos) {
-      Eigen::Vector3d dir = Dir();
-      std::cout << "DIR:" <<  dir << "   :" << dpos << std::endl;
-      pos += dir * dpos;
-      dir_to += dir * dpos;
-      return (*this);
-    }
-
-    Camera& operator-=(Real dpos) {
-      Eigen::Vector3d dir = Dir();
-      pos -= dir * dpos;
-      dir_to -= dir * dpos;
-      return (*this);
-    }
-
-    Camera& operator+=(Eigen::Vector3d dpos) {
-      pos += dpos;
-      dir_to += dpos;
-      return (*this);
-    }
-
-    Camera& operator-=(Eigen::Vector3d dpos) {
-      pos -= dpos;
-      dir_to -= dpos;
-      return (*this);
-    }
-
-    void Rotate(Real r, Real p, Real y) {
-      Eigen::Vector3d rpy(r, p, y);
-      Eigen::Vector3d dir = Dir();
-      dir_to = Dp::Math::rpy2mat3(rpy) * dir + pos;
-      return;
-    }
-  };
-
-  Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
+  ssg::Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
 
   GLfloat veloc = 0.02;
 
@@ -258,9 +186,6 @@ int main()
      * So you should make transpose matrix
      */
     GLfloat projectionMatrix[16];
-    //Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 2.0);
-    //Eigen::Matrix4d projection_mat = camera.LookAtMatrix() * camera_mat;
-    //Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = projection_mat.transpose().cast<GLfloat>();
     Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = camera.ProjectionMatrix().transpose().cast<GLfloat>();
 
     glfwMakeContextCurrent(window);
