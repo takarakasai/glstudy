@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -104,13 +105,52 @@ public:
  
 };
 
+
+/* TODO */
+#if 0
+  static errno_t parseLinkAttribute (std::string &attr_type, std::ifstream &ifs, Link &link) {
+      static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
+        {"Shape"         , [](std::ifstream &ifs, Link &link){return parseShape(ifs, link);         }},
+        {"Hull"          , [](std::ifstream &ifs, Link &link){return parseHull(ifs, link);          }},
+        {"Child"         , [](std::ifstream &ifs, Link &link){return parseChild(ifs, link);         }},
+        {"Inertia"       , [](std::ifstream &ifs, Link &link){return parseLinkInfo(ifs, link);      }},
+        {"JointInertia"  , [](std::ifstream &ifs, Link &link){return parseJointInertia(ifs, link);  }},
+        {"JointViscosity", [](std::ifstream &ifs, Link &link){return parseJointViscosity(ifs, link);}},
+        {"JointRange"    , [](std::ifstream &ifs, Link &link){return parseJointRange(ifs, link);    }}
+      };
+      //static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
+      //  {"JointInertia"  , parseJointInertia  },
+      //  {"JointViscosity", parseJointViscosity},
+      //  {"JointRange"    , parseJointRange    }
+      //};
+      auto result = cases.find(attr_type);
+      return result != cases.end() ? result->second(ifs, link) : EINVAL ;
+  }
+#endif
+
 class vao {
 private:
-  GLuint id;
+  std::unordered_map<GLFWwindow*, GLuint> idmap;
+  //GLuint id_;
   size_t num_of_data_;
   GLenum mode_;
 
   std::vector<std::shared_ptr<vbo>> objs;
+
+private:
+  GLuint getId () {
+    auto context = glfwGetCurrentContext();
+    auto result = idmap.find(context);
+    if (result == idmap.end()) {
+      //GLuint id;
+      //glGenVertexArrays(1, &id);
+      //idmap[context] = id;
+      printf(" [INFO] new window(%p) try to use VAO. creating new VAO.\n", context);
+      glGenVertexArrays(1, &(idmap[context]));
+      drysetvbo(idmap[context]);
+    }
+    return idmap[context];
+  }
 
 public:
 
@@ -121,20 +161,26 @@ public:
   }
 
   vao(GLuint vao_id)
-    : id(vao_id), num_of_data_(0), mode_(0) {
+    : /*id_(vao_id),*/ num_of_data_(0), mode_(0) {
+    idmap[glfwGetCurrentContext()] = vao_id;
   }
 
   vao(void)
   //vao(GLenum mode, size_t num_of_data)
     : num_of_data_(0), mode_(0)
   {
+    GLuint id;
     glGenVertexArrays(1, &id);
+    idmap[glfwGetCurrentContext()] = id;
     DPRINTF(" glGenVertexArrays: 0x%0x\n", id);
   }
 
   virtual ~vao() {
-    glDeleteVertexArrays(1, &id);
-    DPRINTF(" glDeleteVertexArrays: 0x%0x\n", id);
+    for (auto &id : idmap) {
+      DPRINTF(" glDeleteVertexArrays: 0x%x@%p cur:%p\n", id.second, id.first, glfwGetCurrentContext());
+      glDeleteVertexArrays(1, &(id.second));
+    }
+    idmap.clear();
   }
 
   void setup (GLenum mode, size_t num_of_data) {
@@ -143,17 +189,34 @@ public:
   }
 
   void bind() {
+    //glBindVertexArray(id_);
+    auto id = getId();
     glBindVertexArray(id);
     DPRINTF(" glBindVertexArrays: 0x%0x\n", id);
   }
 
   void unbind() {
     glBindVertexArray(0);
-    DPRINTF(" glBindVertexArrays: 0x%0x -- unbind\n", id);
+    DPRINTF(" glBindVertexArrays: 0x%0x -- unbind\n", getId());
   }
 
   void setmode(const GLenum mode) {
     mode_ = mode;
+  }
+
+  void drysetvbo (GLuint id) {
+    glBindVertexArray(id);
+
+    objs[0]->bind();
+    objs[1]->bind();
+    glVertexAttribPointer(0, objs[1]->num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    objs[2]->bind();
+    glVertexAttribPointer(1, objs[2]->num_of_elem(), GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
   }
 
   errno_t setvbo(const GLint attr_idx, std::shared_ptr<vbo> obj, std::shared_ptr<vbo> subobj) {
@@ -226,6 +289,11 @@ public:
       printf("ERROR 0-------------------\n");
       return EINVAL;
     }
+
+    //if (!glIsVertexArray(id_)) {
+    //  printf("UNKNOWN CONTEXT ------------------- %x\n", id_);
+    //  return EINVAL;
+    //}
 
     // TODO: 同時変換行列をuniform変数として設定する必要あり
     bind();

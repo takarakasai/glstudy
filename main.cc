@@ -107,8 +107,8 @@ namespace ssg {
       return camera_;
     }
 
-    static std::unique_ptr<Window> Create (size_t width, size_t height, std::string name, Window *parent) {
-      GLFWwindow* window = glfwCreateWindow(width, height, name.c_str(), NULL, parent ? parent->WindowHandle() : NULL);
+    static std::unique_ptr<Window> Create (size_t width, size_t height, std::string name, GLFWwindow *parent) {
+      GLFWwindow* window = glfwCreateWindow(width, height, name.c_str(), NULL, parent);
       return std::unique_ptr<Window>(new Window(window, width, height));
     }
 
@@ -169,7 +169,7 @@ namespace ssg {
       return *(windows_.begin()->get());
     }
 
-    errno_t AddWindow (std::unique_ptr<Window> win) {
+    errno_t AddWindow (std::unique_ptr<Window>& win) {
       windows_.push_back(std::move(win));
       return 0;
     }
@@ -203,6 +203,8 @@ namespace ssg {
           /* TODO: should call Draw with Location ids */
           // obj.Draw(locations_list);
         }
+
+        win->SwapBuffers();
       }
       
       return 0;
@@ -264,8 +266,9 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 int main()
 {
   ECALL(ssg::InitGlfw());
-
-  std::unique_ptr<ssg::Window> window = ssg::Window::Create(680, 480, "test window", NULL);
+  
+  std::unique_ptr<ssg::Window> window = ssg::Window::Create(680, 480, "window1", NULL);
+  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", window->WindowHandle());
   window->SetCurrent();
 
   ECALL(ssg::InitGlew());
@@ -296,7 +299,8 @@ int main()
 #endif
 
   ssg::Scene scene;
-  scene.AddWindow(std::move(window));
+  scene.AddWindow(window);
+  scene.AddWindow(window2);
 
   std::string name = "./obj/eV/eV.obj";
   auto node_1 = ssg::test2(name);
@@ -382,7 +386,7 @@ int main()
     glfwSwapBuffers(window);
 #endif
 
-    scene.RootWindow().SwapBuffers();
+    //scene.RootWindow().SwapBuffers();
 
     /* Get EVENT */
     /* non block */
