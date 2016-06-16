@@ -95,6 +95,11 @@ public:
     //Eigen::Matrix3d rot = rot_ * Rot;
     Eigen::Vector3d pos = Pos + Rot * pos_;
 
+    /* TODO: move this comment.
+     * OpenGL shall treat matrix as row-first rule
+     * Eigen shall treat matrix as row-first rule at default 
+     * So you should make transpose matrix
+     */
     GLfloat transformMatrix[16] = {
       (float)rot(0,0), (float)rot(1,0), (float)rot(2,0), 0.0,
       (float)rot(0,1), (float)rot(1,1), (float)rot(2,1), 0.0,
@@ -117,6 +122,11 @@ public:
       return -1;
     }
 
+    /* TODO: move this comment.
+     * OpenGL shall treat matrix as row-first rule
+     * Eigen shall treat matrix as row-first rule at default 
+     * So you should make transpose matrix
+     */
     GLfloat transformMatrix[16] = {
       (float)rot_(0,0), (float)rot_(1,0), (float)rot_(2,0), 0.0,
       (float)rot_(0,1), (float)rot_(1,1), (float)rot_(2,1), 0.0,

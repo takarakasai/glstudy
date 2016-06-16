@@ -22,23 +22,11 @@
 
 #define DPRINTF(...) 
 
-//static void error_callback(int error, const char* description)
-//{
-//    fputs(description, stderr);
-//}
-
 #if 0
 [[maybe_unused]] static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
-}
-#endif
-
-#if 0
-void cb_resize(GLFWwindow *const window, int width, int height)
-{
-  glViewport(0, 0, width, height);
 }
 #endif
 
@@ -267,39 +255,17 @@ int main()
 {
   ECALL(ssg::InitGlfw());
   
-  std::unique_ptr<ssg::Window> window = ssg::Window::Create(680, 480, "window1", NULL);
+  std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL);
   std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", window->WindowHandle());
-  window->SetCurrent();
+  window1->SetCurrent();
 
   ECALL(ssg::InitGlew());
 
-  //glfwSwapInterval(1);
-  //glfwSetKeyCallback(window, key_callback);
-
-  //glViewport(100,100,640,480);
-
-#if 0
-  // 背景色を指定する
-  glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
-
-  // hidden surface
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LEQUAL);
-
-  //プログラムオブジェクトを作成する
-  const GLuint program = ssg::loadProgram(
-      "./shader/point.vert", {"pv", "normal"},
-      "./shader/point.frag", "fc");
-
-  std::cout << program << ":PROGRAM" << std::endl;
-
-  const GLint projectionMatrixLocation = glGetUniformLocation(program, "projectionMatrix");
-  const GLint transformMatrixLocation = glGetUniformLocation(program, "transformMatrix");
-  const GLint materialColorLocation = glGetUniformLocation(program, "materialColor");
-#endif
+  auto camera1 = window1->GetCamera();
+  auto camera2 = window2->GetCamera();
 
   ssg::Scene scene;
-  scene.AddWindow(window);
+  scene.AddWindow(window1);
   scene.AddWindow(window2);
 
   std::string name = "./obj/eV/eV.obj";
@@ -308,26 +274,13 @@ int main()
     fprintf(stderr, "fail to load %s.\n", name.c_str());
     return 1;
   }
-  std::shared_ptr<Link> test = node_1;
-  //AddObject (std::shared_ptr<InterfaceSceneObject> obj) {
   scene.AddObject(node_1);
-#if 0
-  node_1->SetTransformMatrixLocId(transformMatrixLocation);
-  node_1->SetMaterialColorLocId(materialColorLocation);
-#endif
-
 
   std::shared_ptr<SceneObject> field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001);
-  //obj1->SetOffset(pos_, rot_);
-#if 0
-  field->SetTransformMatrixLocId(transformMatrixLocation);
-  field->SetMaterialColorLocId(materialColorLocation);
-#endif
+  Vector3d pos_ = (Vector3d){0.0,0.0,-0.200};
+  Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
+  field->SetOffset(pos_, rot_);
   scene.AddObject(field);
-
-#if 0
-  ssg::Camera camera(0.2, 0.0, 0.0,/**/ 0.0, 0.0, 0.0,/**/ 0.0, 0.0, 1.0);
-#endif
 
   cycle_measure cmeasure(5);
   cmeasure.set_cout(true);
@@ -335,66 +288,20 @@ int main()
   //ウィンドウが開いている間繰り返す
   while (glfwWindowShouldClose(scene.RootWindow().WindowHandle()) == GL_FALSE)
   {
-    static int count = 0;
-
     if (handleWindow(scene.RootWindow()) != 0) {
       std::cout << "BREAKED!!!!|" << std::endl;
       break;
     }
 
-    /* TODO: move this comment.
-     * OpenGL shall treat matrix as row-first rule
-     * Eigen shall treat matrix as row-first rule at default 
-     * So you should make transpose matrix
-     */
-#if 0
-    GLfloat projectionMatrix[16];
-    Eigen::Map<Eigen::Matrix4f>(projectionMatrix, 4, 4) = camera.ProjectionMatrix().transpose().cast<GLfloat>();
-#endif
-
-#if 0
-    glfwMakeContextCurrent(window);
-#endif
-    //glfwMakeContextCurrent(window.RootWindow().WindowHandle());
-
-#if 0
-    // clear window
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // start using shader program
-    glUseProgram(program);
-
-    glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, projectionMatrix);
-#endif
-
     node_1->UpdateCasCoords();
-#if 0
-    node_1->ExecAll();
-#endif
-
-    {
-      Vector3d pos_ = (Vector3d){0.0,0.0,-0.200};
-      Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
-#if 0
-      field->Draw(rot_, pos_);
-#endif
-      field->SetOffset(pos_, rot_);
-    }
 
     scene.Draw();
-
-#if 0
-    glfwSwapBuffers(window);
-#endif
-
-    //scene.RootWindow().SwapBuffers();
 
     /* Get EVENT */
     /* non block */
     glfwPollEvents();
 
     cmeasure.update();
-
-    count++;
   }
 
   return 0;
