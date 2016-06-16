@@ -418,6 +418,14 @@ public:
     }
   }
 
+  errno_t Draw() {
+    switch(mode_) {
+      case WIRED: return wired_.Draw();
+      case SOLID: return solid_.Draw();
+      default:    return            -1;
+    }
+  }
+
   /* TODO to be removed */
   errno_t SetTransformMatrixLocId (GLint id) {
     ECALL(wired_.SetTransformMatrixLocId(id));
@@ -457,6 +465,15 @@ public:
   errno_t SetDrawMode(DrawMode mode) {
     mode_ = mode;
     return 0;
+  }
+
+  /* TODO there are two coordinates */
+  virtual Coordinates& GetCoordinates() {
+    switch(mode_) {
+      case WIRED: return wired_.GetCoordinates();
+      case SOLID: return solid_.GetCoordinates();
+      default:    return wired_.GetCoordinates();;
+    }
   }
 };
 

@@ -1,3 +1,7 @@
+
+#ifndef CASCOORDS_H
+#define CASCOORDS_H
+
 #include <list>
 #include <memory>
 #include <eigen3/Eigen/Core>
@@ -198,3 +202,4 @@ public:
   };
 };
 
+#endif

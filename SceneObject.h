@@ -27,9 +27,10 @@ private:
   GLint gl_color_loc_id_;
   
   /* TODO integ constructor's rot/pos */
-  Eigen::Matrix3d rot_;
-  Eigen::Vector3d pos_;
+  Eigen::Matrix3d rot_; /* TODO: */
+  Eigen::Vector3d pos_; /* TODO: */
   //Dp::Math::real scale_;
+  Coordinates coords_;
 
   Eigen::Vector4f color_;
 
@@ -38,6 +39,8 @@ public:
     vaos(nov), rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/,
     color_(0.5,0.5,0.5,1.0) {
     gl_tmat_loc_id_ = -1;
+    coords_.Rot() = Eigen::Matrix3d::Identity();
+    coords_.Pos() = Eigen::Vector3d::Zero();
   };
 
   virtual ~SceneObject() {};
@@ -63,8 +66,10 @@ public:
   }
 
   errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
-    rot_ = rot;
-    pos_ = pos;
+    coords_.Rot() = rot_;
+    coords_.Pos() = pos_;
+    rot_ = rot; /* TODO: to be deleted */
+    pos_ = pos; /* TODO: to be deleted */
     return 0;
   }
 
@@ -106,9 +111,35 @@ public:
     return 0;
   }
 
+  errno_t Draw() {
+    if (gl_tmat_loc_id_ == -1 || gl_color_loc_id_ == -1) {
+      fprintf(stderr, "ERROR %s LocID(%d)\n", __PRETTY_FUNCTION__, gl_tmat_loc_id_);
+      return -1;
+    }
+
+    GLfloat transformMatrix[16] = {
+      (float)rot_(0,0), (float)rot_(1,0), (float)rot_(2,0), 0.0,
+      (float)rot_(0,1), (float)rot_(1,1), (float)rot_(2,1), 0.0,
+      (float)rot_(0,2), (float)rot_(1,2), (float)rot_(2,2), 0.0,
+      (float)pos_(0),   (float)pos_(1)  , (float)pos_(2),   1.0
+    };
+
+    /* position transformation */
+    glUniformMatrix4fv(gl_tmat_loc_id_, 1, GL_FALSE, transformMatrix);
+    /* material color */
+    glUniform4fv(gl_color_loc_id_, 1, &color_(0));
+
+    ECALL(vaos::Draw());
+    return 0;
+  }
+
   virtual errno_t SetDrawMode(DrawMode mode) {
     fprintf(stderr, "Can not change draw mode\n");
     return -11;
+  }
+
+  virtual Coordinates& GetCoordinates() {
+    return coords_;
   }
 };
 

@@ -13,6 +13,9 @@
 
 #include "Joint.h"
 
+// TODO: remove
+#include "InterfaceSceneObject.h"
+
 class InterfaceSceneObject;
 
 class Link : public CasCoords {
@@ -140,14 +143,14 @@ public:
 
   /* Coexistance of DrawableLink & Link */
   /* TODO: int32_t --> GLint */
-  virtual void SetDrawMode (bool isSolid) {
-    return;
+  virtual errno_t SetDrawMode (InterfaceSceneObject::DrawMode mode) {
+    return 0;
   }
-  virtual void SetTransformMatrixLocId (int32_t id) {
-    return;
+  virtual errno_t SetTransformMatrixLocId (int32_t id) {
+    return 0;
   }
-  virtual void SetMaterialColorLocId (int32_t id) {
-    return;
+  virtual errno_t SetMaterialColorLocId (int32_t id) {
+    return 0;
   }
   virtual void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
     std::cout << "  ERROR-------------------------------\n";

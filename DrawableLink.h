@@ -13,7 +13,7 @@ using namespace Eigen;
 /* ssg : Simple Scene Graph */
 namespace ssg {
 
-  class DrawableLink : public Link {
+  class DrawableLink : public Link, public InterfaceSceneObject/*Implement*/ {
   private:
     //const char* name_;
     //std::string name_;
@@ -68,33 +68,6 @@ namespace ssg {
       return std::make_shared<DrawableLink>(name, objs, joint, lpos, mass, centroid, cinertia);
     }
 
-    virtual void SetDrawMode (bool isSolid) {
-      for (auto &obj : objs_) {
-        obj->SetDrawMode(isSolid == true ? InterfaceSceneObject::SOLID : InterfaceSceneObject::WIRED);
-      }
-      for (auto &link : clinks_) {
-        link->SetDrawMode(isSolid);
-      }
-    }
-
-    void SetTransformMatrixLocId (int32_t id) {
-      for (auto &obj : objs_) {
-        obj->SetTransformMatrixLocId(id);
-      }
-      for (auto &link : clinks_) {
-        link->SetTransformMatrixLocId(id);
-      }
-    }
-
-    void SetMaterialColorLocId (int32_t id) {
-      for (auto &obj : objs_) {
-        obj->SetMaterialColorLocId(id);
-      }
-      for (auto &link : clinks_) {
-        link->SetMaterialColorLocId(id);
-      }
-    }
-
     void AddShape (std::shared_ptr<InterfaceSceneObject> obj) {
       objs_.push_back(obj);
     }
@@ -103,13 +76,65 @@ namespace ssg {
       objs_.splice(objs_.end(), objs);
     }
 
-  public:
+  public: /* InterfaceSceneObject */
     errno_t Exec(void) {
       for (auto &obj : objs_) {
         obj->Draw(CasCoords::WRot(), CasCoords::WPos());
       }
       return 0;
     }
+    errno_t Draw(void) {
+      ECALL(ExecAll());
+      return 0;
+    }
+
+    errno_t Draw(Eigen::Matrix3d& rot, Eigen::Vector3d& pos) {
+      return -1;
+    }
+
+    errno_t SetTransformMatrixLocId (int32_t id) {
+      for (auto &obj : objs_) {
+        obj->SetTransformMatrixLocId(id);
+      }
+      for (auto &link : clinks_) {
+        link->SetTransformMatrixLocId(id);
+      }
+      return 0;
+    }
+
+    errno_t SetMaterialColorLocId (int32_t id) {
+      for (auto &obj : objs_) {
+        obj->SetMaterialColorLocId(id);
+      }
+      for (auto &link : clinks_) {
+        link->SetMaterialColorLocId(id);
+      }
+      return 0;
+    }
+
+    errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
+      return -1;
+    }
+
+    errno_t SetColor(Eigen::Vector4d& color) {
+      return -1;
+    }
+
+    errno_t SetDrawMode (InterfaceSceneObject::DrawMode mode) {
+      for (auto &obj : objs_) {
+        obj->SetDrawMode(mode);
+      }
+      for (auto &link : clinks_) {
+        link->SetDrawMode(mode);
+      }
+
+      return 0;
+    }
+
+    Coordinates& GetCoordinates() {
+      return CasCoords::World();
+    }
+
   };
 }
 

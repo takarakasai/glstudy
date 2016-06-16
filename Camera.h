@@ -1,4 +1,7 @@
 
+#ifndef CAMERA_H
+#define CAMERA_H
+
 #include <eigen3/Eigen/Core>
 
 #include <GLFW/glfw3.h>
@@ -79,3 +82,6 @@ namespace ssg {
   };
 
 }
+
+#endif
+

@@ -12,12 +12,15 @@
 #endif
 
 #include "dp_type.h"
+#include "CasCoords.h"
 
 // interface
 class InterfaceSceneObject {
 private:
 public:
   virtual errno_t Draw(Eigen::Matrix3d& rot, Eigen::Vector3d& pos) = 0;
+  virtual errno_t Draw() = 0;
+
   /* TODO: scene class should have those setter */
   virtual errno_t SetTransformMatrixLocId (GLint id) = 0;
   virtual errno_t SetMaterialColorLocId (GLint id) = 0;
@@ -34,6 +37,7 @@ public:
     SOLID
   } DrawMode;
   virtual errno_t SetDrawMode(DrawMode mode) = 0;
+  virtual Coordinates& GetCoordinates() = 0;
 
   //InterfaceSceneObject() {};
   virtual ~InterfaceSceneObject() {};
