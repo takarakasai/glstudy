@@ -251,12 +251,14 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
   return 0;
 }
 
+#include "ode/ode.h"
+
 int main()
 {
   ECALL(ssg::InitGlfw());
   
   std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL);
-  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", window->WindowHandle());
+  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", window1->WindowHandle());
   window1->SetCurrent();
 
   ECALL(ssg::InitGlew());
