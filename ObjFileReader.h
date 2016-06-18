@@ -429,7 +429,8 @@ namespace ssg {
           stream >> link_val;
           auto joint = link->FindJoint(link_name);
           if (joint) {
-            joint->SetValue(link_val);
+            //joint->SetValue(link_val);
+            joint->SetOffsetValue(link_val);
           }
           //node2->GetJoint().SetValue(-rad + Dp::Math::deg2rad(-120));
           /* TODO: SET */
