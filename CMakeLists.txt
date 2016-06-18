@@ -7,7 +7,9 @@ else()
 set(CMAKE_CXX_COMPILER g++)
 endif()
 
-add_definitions(-std=c++11 -Wall)
+# dDOUBLE & dIDEDOUBLE to be set for using ODE with double precision
+#add_definitions(-std=c++11 -Wall -DdDOUBLE -DdIDEDOUBLE)
+add_definitions(-std=c++11 -Wall -DdDOUBLE)
 
 include_directories(
   .
@@ -20,7 +22,8 @@ if(APPLE)
   find_library( OpenGL_LIBRARY OpenGL )
   set(EXTRA_LIBS glfw3 ${OpenGL_LIBRARY})
 else()
-  set(EXTRA_LIBS glfw GL)
+    #set(EXTRA_LIBS glfw GL)
+  set(EXTRA_LIBS glfw GL ode)
 endif()
 
 link_libraries(
