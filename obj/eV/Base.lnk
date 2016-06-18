@@ -2,4 +2,7 @@ Base Base
 Shape obj/eV/Base.shp
 Hull obj/eV/Base.shp
 
-Child obj/eV/FR_HIP_YAW.lnk 0.160 -0.110 0.0 0.0 0.0 0.0
+Child obj/eV/FR_HIP_YAW.lnk +0.160 -0.110 0.0 0.0 0.0 0.0
+Child obj/eV/FL/HIP_YAW.lnk +0.160 +0.110 0.0 0.0 0.0 0.0
+Child obj/eV/BR/HIP_YAW.lnk -0.160 -0.110 0.0 0.0 0.0 0.0
+Child obj/eV/BL/HIP_YAW.lnk -0.160 +0.110 0.0 0.0 0.0 0.0

@@ -1,0 +1,5 @@
+Compound {
+    obj/eV/BR/KNEE_PITCH_BODY.shp 0 0 0.00  0 0 0
+    obj/eV/BR/KNEE_PITCH_LINK.shp 0 0 0.05 90 0 0
+}
+Inertia Auto
