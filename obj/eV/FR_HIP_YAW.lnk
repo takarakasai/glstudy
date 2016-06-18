@@ -2,9 +2,9 @@ RotaryLinkZ FR_HIP_YAW
 Shape obj/eV/FR_HIP_YAW.shp
 Hull obj/eV/FR_HIP_YAW.shp
 Inertia
-     0.0
+     0.2
      0.0 0.0 0.0
-     0.0 0.0 0.0
+     0.2 0.2 0.2
      0.0 0.0 0.0
 JointRange 0 -180.0 180.0
 JointInertia 0 0
