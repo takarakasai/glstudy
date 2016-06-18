@@ -67,6 +67,7 @@ public:
 
       memcpy(&before_, &cur, sizeof(cur));
 
+      /* ns --> usec --> msec --> sec */
       double spf = diff / period_ / 1000 / 1000 / 1000;
       double fps = 1.0 / spf;
 
