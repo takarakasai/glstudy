@@ -418,11 +418,17 @@ int main()
   //world.setGravity(0, 9.9, 0);
   //world.setERP(dReal erp);
   //world.setCFM(dReal cfm);
+  world.setContactSurfaceLayer(0.08);
   
   //dBodyID     link[NUM];  // link[0] is base link
   //dJointID      joint[NUM]
   dBody link[nol];
   dJoint* joint[nol];
+
+  /*
+   * dJointFeedback has f1,t1,f2,t2 of dvector3
+   * */
+  dJointFeedback jFb[nol];
 
   for (size_t i = 0; i < nol; i++) {
     std::cout << "Name: " << lname[i] << std::endl;
@@ -435,7 +441,7 @@ int main()
     auto I = rlink->GetIntertia();
     auto C = rlink->GetCentroid();
     if (i == 0) {
-      m.setParameters(2.5, 0,0,0, 2.5,2.5,2.5, 0,0,0);     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
+      m.setParameters(1.0, 0,0,0, 1.0,1.0,1.0, 0,0,0);     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
     } else {
       m.setParameters(M, C(0),C(1),C(2), I(0,0),I(1,1),I(2,2), I(0,1),I(0,2),I(1,2));     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
       m.translate(-C(0),-C(1),-C(2));
@@ -491,17 +497,20 @@ int main()
     Eigen::Vector3d waxis = rlink->WRot() * rlink->GetJoint().Axis();
     std::cout << "WAXIS:" << waxis(0) << "," << waxis(1) << "," << waxis(2) << std::endl;
     jnt->setAxis(waxis(0), waxis(1), waxis(2));
-    jnt->setParam(dParamLoStop, -Dp::Math::deg2rad(60));
-    jnt->setParam(dParamHiStop, +Dp::Math::deg2rad(60));
+    jnt->setParam(dParamLoStop, -Dp::Math::deg2rad(120));
+    jnt->setParam(dParamHiStop, +Dp::Math::deg2rad(120));
     //jnt->setParam(dParamLoStop, -(rlink->GetJoint().GetOffsetAngle() - Dp::Math::deg2rad(10)));
     //jnt->setParam(dParamHiStop, -(rlink->GetJoint().GetOffsetAngle() + Dp::Math::deg2rad(10)));
+
+    jnt->setFeedback(&jFb[j]);
   }
 #endif
   dJointGroup jgrp;
   dSpace* space = new dHashSpace();
 
   /* mesh */
-  Vector3d _pos = (Vector3d){0.0,0.0,-0.350};
+  Vector3d _pos = (Vector3d){0.5,0.0,-0.210};
+  //Vector3d _pos = (Vector3d){0.5,0.0,-0.350};
   Matrix3d _rot = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
   std::shared_ptr<ssg::SolidMesh> kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001, _rot, _pos);
   scene.AddObject(kawasaki_field);
@@ -529,6 +538,8 @@ int main()
     //geom[i] = new dSphere (*space, 0.01);
     if (i == 1 || i == 5 || i == 9 || i == 13) {
       geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.02/*length*/);
+    } else if (i == 4 || i == 8 || i == 12 || i == 16) {
+      geom[i] = new dSphere (*space, 0.00001);
     } else {
       geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.10/*length*/);
     }
@@ -569,9 +580,13 @@ int main()
     if (isGround) {
       //std::cout << "[" << n << "] : " << o1 << "," << o2 << std::endl;
       for (int i = 0; i < n; i++) {
-        contact[i].surface.mode = dContactBounce; // 地面の反発係数を設定
+        //contact[i].surface.mode = dContactBounce; // 地面の反発係数を設定
+        contact[i].surface.mode = dContactBounce|dContactApprox1|dContactSoftERP|dContactSoftCFM;
+        contact[i].surface.mu   = 1.0; // dInfinity;
+        contact[i].surface.soft_erp = 1.0; //1.0;
+        contact[i].surface.soft_cfm = 1e-10;
         contact[i].surface.bounce = 0.00; // (0.0~1.0)   反発係数は0から1まで
-        contact[i].surface.bounce_vel = 0.00; // (0.0以上)   反発に必要な最低速度
+        contact[i].surface.bounce_vel = 0.60; // (0.0以上)   反発に必要な最低速度
   
         // コンタクトジョイント生成                        
         dJointID c = dJointCreateContact(world->id(), jgrp->id(), &contact[i]);
@@ -595,7 +610,34 @@ int main()
   /**********************************************************************************************************/
 
   //usleep(4000*1000);
+  //
+  const dReal ref2 = -50.0;
+  size_t count2 = 1000; 
+  dReal ref_angle_diff[] = {
+      0.0, /* base */
+      0.0,  Dp::Math::deg2rad(-ref2/2.0),  Dp::Math::deg2rad(ref2), 0.0,
+      0.0,  Dp::Math::deg2rad(-ref2/2.0),  Dp::Math::deg2rad(ref2), 0.0,
+      //0.0,                          0.0 ,                     0.0 , 0.0,
+      //0.0,                          0.0 ,                     0.0 , 0.0,
+      0.0, -Dp::Math::deg2rad(-ref2/2.0), -Dp::Math::deg2rad(ref2), 0.0,
+      0.0, -Dp::Math::deg2rad(-ref2/2.0), -Dp::Math::deg2rad(ref2), 0.0
+  };
+  dReal ref_angle_diff2[] = {
+      0.0, /* base */
+      0.0,  Dp::Math::deg2rad(-45.0/2),  Dp::Math::deg2rad(45), 0.0,
+      0.0,  Dp::Math::deg2rad(-45.0/2),  Dp::Math::deg2rad(45), 0.0,
+      //0.0,                        0.0 ,                   0.0 , 0.0,
+      //0.0,                        0.0 ,                   0.0 , 0.0,
+      0.0, -Dp::Math::deg2rad(-45.0/2), -Dp::Math::deg2rad(45), 0.0,
+      0.0, -Dp::Math::deg2rad(-45.0/2), -Dp::Math::deg2rad(45), 0.0
+  };
+  dReal ref_angle[nol];
+  for (size_t j = 1; j < nol; j++) {
+    auto rlink = robot->FindLink(lname[j]);
+    ref_angle[j] = rlink->GetJoint().GetAngle();
+  }
 
+  size_t count = 0;
   //ウィンドウが開いている間繰り返す
   while (glfwWindowShouldClose(scene.RootWindow().WindowHandle()) == GL_FALSE)
   {
@@ -616,6 +658,80 @@ int main()
     scene.Draw();
 
     cmeasure.update();
+
+    /*********  controller side *************************/
+    double Kp = 30;
+    // [kgf-cm]
+    //const double KRS2572HV_MAX_TRQ  = 25.0;
+    const double KRS6003RHV_MAX_TRQ = 67.0 * 3;
+    // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
+    //const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13);
+    const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * 100;
+#define TARGET_MAX_TRQ KRS6003RHV_MAX_TRQ
+#define TARGET_MAX_SPD KRS6003RHV_MAX_SPD
+    bool islimit = false;
+    for (size_t j = 1; j < nol; j++) {
+      auto rlink = robot->FindLink(lname[j]);
+      double diff;
+      if (count < count2) {
+        diff = ref_angle[j] - rlink->GetJoint().GetAngle();
+      } else if (count < count2 * 2) {
+        diff = ref_angle[j] - rlink->GetJoint().GetAngle() + ref_angle_diff[j];
+      } else if (count < count2 * 3) {
+        diff = ref_angle[j] - rlink->GetJoint().GetAngle() + ref_angle_diff2[j];
+      } else {
+        diff = ref_angle[j] - rlink->GetJoint().GetAngle();
+      }
+      double cspd = Kp * diff;
+      if (cspd < 0) {
+        if (-cspd > (TARGET_MAX_SPD)){
+          cspd = -(TARGET_MAX_SPD);
+          islimit = true;
+        }
+      } else {
+        if ( cspd > TARGET_MAX_SPD){
+          cspd =  TARGET_MAX_SPD;
+          islimit = true;
+        }
+      }
+      joint[j]->setParam(dParamVel, -cspd);
+      joint[j]->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(TARGET_MAX_TRQ));
+      if (islimit) {
+        printf(" %+7.2lf", Dp::Math::rad2deg(cspd));
+        if (j == 4 || j == 8 || j == 12 || j == 16) {
+          printf(" (max:%+7.2lf) [deg/s]\n", Dp::Math::rad2deg(TARGET_MAX_SPD));
+        }
+      }
+    }
+
+    bool ismax = false;
+    static double jtrq_max[20] = {0.0};
+    for (size_t i = 1; i < nol; i++){
+      dJointFeedback* jf;
+      jf = joint[i]->getFeedback();
+      if (jf == NULL) continue;
+
+      if (jtrq_max[i]*jtrq_max[i] < jf->t2[1]*jf->t2[1]) {
+        jtrq_max[i] = jf->t2[1]; 
+        ismax = true;
+      }
+      /*
+      printf("[%02zd] : %+7.2lf %+7.2lf %+7.2lf %+7.2lf %+7.2lf %+7.2lf\n",
+          i,
+          jf->t1[0], jf->t1[1], jf->t1[2],
+          jf->t2[0], jf->t2[1], jf->t2[2]);
+      */
+    }
+    if (ismax) {
+      for (size_t i = 1; i < nol; i++){
+        //printf(" %+012.4lf", Dp::Phyx::Nm2Kgcm(jtrq_max[i]));
+        printf(" %+012.4lf", (jtrq_max[i]));
+        if (i == 4 || i == 8 || i == 12 || i == 16) {
+          printf("\n");
+        }
+      }
+      printf("\n");
+    }
 
     /*********  simulation side *************************/
 #if 1 
@@ -648,6 +764,7 @@ int main()
     jgrp.empty();
 
 #endif
+    count++;
   }
 
   return 0;
