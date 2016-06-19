@@ -395,7 +395,7 @@ int main()
   std::shared_ptr<WiredSphere> sphere[nol];
   std::string lname[] = {
     "Base",
-    "FR_HIP_YAW", "FR_HIP_PITCH", "FR_KNEE_PITCH", "FR_ANKLE_PITCH",
+    "FR/HIP_YAW", "FR/HIP_PITCH", "FR/KNEE_PITCH", "FR/ANKLE_PITCH",
     "FL/HIP_YAW", "FL/HIP_PITCH", "FL/KNEE_PITCH", "FL/ANKLE_PITCH",
     "BR/HIP_YAW", "BR/HIP_PITCH", "BR/KNEE_PITCH", "BR/ANKLE_PITCH",
     "BL/HIP_YAW", "BL/HIP_PITCH", "BL/KNEE_PITCH", "BL/ANKLE_PITCH"
