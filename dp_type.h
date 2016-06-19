@@ -44,6 +44,14 @@ namespace Dp {
 
   namespace Phyx {
     const Math::real G = 9.8;
+
+    inline const Math::real Nm2Kgcm (Math::real moment) {
+      return moment * 100.0 / G; /* Nm --> Ncm --> kgcm */
+    }
+
+    inline const Math::real Kgcm2Nm (Math::real kgcm) {
+      return kgcm * G / 100.0;   /* Nm --> Ncm --> kgcm */
+    }
   }
 
 }
