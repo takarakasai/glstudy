@@ -112,7 +112,7 @@ namespace ssg {
       return 0;
     }
 
-    errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
+    errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
       return -1;
     }
 

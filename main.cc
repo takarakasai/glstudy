@@ -23,6 +23,7 @@
 // for sleep
 #include "unistd.h"
 
+
 #define DPRINTF(...) 
 
 #if 0
@@ -291,7 +292,56 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
   return 0;
 }
 
+#include <iomanip>
+
 #include "ode/ode.h"
+#include "ode/collision_trimesh.h"
+
+namespace ode {
+  Eigen::Vector3d vec32vec (const dReal *vec3) {
+    /* ODE vec3 is 4*1 matrix */
+    Eigen::Vector3d vec;
+    for (int i = 0; i < 3; i++) {
+      vec(i) = vec3[i];
+    }
+
+    return vec;
+  }
+
+  Eigen::Matrix3d mat32mat (const dReal *mat3) {
+    /* ODE mat3 is 3*4 matrix */
+    Eigen::Matrix3d mat;
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        mat(i,j) = mat3[i*4 + j];
+      }
+    }
+
+    return mat;
+  }
+
+  Eigen::Vector3d vec2vec3 (const Eigen::Vector3d vec, dReal *vec3) {
+    /* ODE vec3 is 4*1 matrix */
+    for (int i = 0; i < 3; i++) {
+      vec3[i] = vec(i);
+    }
+    vec3[3] = 1.0;
+
+    return vec;
+  }
+
+  Eigen::Matrix3d mat2mat3 (const Eigen::Matrix3d mat,  dReal *mat3) {
+    /* ODE mat3 is 3*4 matrix */
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        mat3[i*4 + j] = mat(i,j);
+      }
+      mat3[i*4 + 3] = 0.0;
+    }
+
+    return mat;
+  }
+};
 
 int main()
 {
@@ -333,14 +383,15 @@ int main()
   //Vector3d pos_ = (Vector3d){0.0,0.0,-0.200};
   //Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
   //field->SetOffset(pos_, rot_);
+  
   std::shared_ptr<SceneObject> field = std::make_shared<SolidRectangular>(Eigen::Vector3f{0,0,-0.220}, 1.0, 1.0, 0.05);
-  scene.AddObject(field);
+  //scene.AddObject(field);
 
   cycle_measure cmeasure(10);
   //cmeasure.set_cout(true);
 
   /************************************* ODE ****************************************************************/
-  constexpr size_t nol = 5;//17;
+  constexpr size_t nol = 3; //17;
   std::shared_ptr<WiredSphere> sphere[nol];
   std::string lname[] = {
     "Base",
@@ -362,7 +413,8 @@ int main()
 #if 1
   dInitODE();
   dWorld world;
-  world.setGravity(0.0, 0.0, -9.8 / 10);
+  //dWorldSetContactMaxCorrectingVel(world.id(), 20);
+  world.setGravity(0.0, 0.0, -9.8);
   //world.setGravity(0, 9.9, 0);
   //world.setERP(dReal erp);
   //world.setCFM(dReal cfm);
@@ -435,16 +487,107 @@ int main()
     jnt->setAxis(waxis(0), waxis(1), waxis(2));
   }
 #endif
-
   dJointGroup jgrp;
   dSpace* space = new dHashSpace();
+
+  /* mesh */
+  Vector3d _pos = (Vector3d){0.5,0.0,-0.150};
+  Matrix3d _rot = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
+  std::shared_ptr<ssg::SolidMesh> kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001, _rot, _pos);
+  scene.AddObject(kawasaki_field);
+  ssg::Vertices& verts = kawasaki_field->GetVertices();
+  std::vector<GLuint>& idx = kawasaki_field->GetIndices();
+  std::vector<Eigen::Vector3f> verts1;
+  std::vector<Eigen::Vector3d> verts2;
+  std::vector<Eigen::Vector3f> norms1;
+  std::vector<Eigen::Vector3d> norms2;
+  std::vector<GLuint> idx_;
+  dReal verts3[verts.poses.size()*3];
+  dReal norms3[verts.poses.size()*3];
+  dReal verts4[3*6] = {
+    -1.0, -1.0, -0.220 + 0.05/2.0,
+    +1.0, +1.0, -0.220 + 0.05/2.0,
+    -1.0, +1.0, -0.220 + 0.05/2.0,
+
+    -1.0, -1.0, -0.220 + 0.05/2.0,
+    -1.0, +1.0, -0.220 + 0.05/2.0,
+    +1.0, +1.0, -0.220 + 0.05/2.0
+  };
+  dTriIndex idx4[6] = {
+    1,2,3,
+    4,5,6
+  };
+  size_t i = 0;
+  for (auto &pos: verts.poses) {
+    Eigen::Vector3d tmp = pos.cast<double>();
+    Eigen::Vector3d norm = verts.norms[i].cast<double>();
+    //tmp  = _pos + _rot * tmp;
+    
+    //norm =        _rot * norm;
+    verts1.push_back(tmp.cast<float>());
+    verts2.push_back(tmp);
+    verts3[i*3+0] = tmp(0);
+    verts3[i*3+1] = tmp(1);
+    verts3[i*3+2] = tmp(2);
+    norms1.push_back(norm.cast<float>());
+    norms2.push_back(norm);
+    norms3[i*3+0] = norm(0);
+    norms3[i*3+1] = norm(1);
+    norms3[i*3+2] = norm(2);
+    i++;
+    std::cout << std::fixed << std::showpos << std::setprecision(3) << tmp(0) << "," << tmp(1) << "," << tmp(2) << std::endl;
+  }
+  std::vector<dTriIndex> idx2;
+  dTriIndex idx3[idx.size()];
+  i = 0;
+  for (auto &i: idx) {
+    idx_.push_back(i);
+    idx2.push_back(i);
+    idx3[i] = i;
+    i++;
+  }
+  std::cout << idx.size() << ":" << verts2.size() << std::endl;
+  std::cout << "sizeof:" << sizeof(GLuint) << ":" << sizeof(Eigen::Vector3f) << std::endl;
+  dTriMeshDataID Data = dGeomTriMeshDataCreate();
+  /* TODO:フィールドオブジェクトの参照の値を利用するとNG　配列かベクタに入れ直すとOK(要原因調査) */
+  dGeomTriMeshDataBuildSingle1(
+            Data,
+            //&verts1[0], 3 * sizeof(float), verts.poses.size(),
+            &verts.poses[0], 3 * sizeof(float), verts.poses.size(),
+            &idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&verts.norms[0]);
+            //&idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&norms1[0]);
+  //dGeomTriMeshDataBuildDouble1(
+  //          Data,
+  //          &verts2[0], 3 * sizeof(double), verts.poses.size(),
+  //          &idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&norms2[0]);
+  //dGeomTriMeshDataBuildDouble1(
+  //          Data,
+  //          verts3, 3 * sizeof(double), verts.poses.size(),
+  //          idx3, idx.size(), 3*sizeof(GLuint), (void*)norms3);
+  dGeomID TriMesh = dCreateTriMesh(space->id()/*spaceID*/, Data, NULL, NULL, NULL);
+  dGeomSetData(TriMesh/*geomID*/, Data/*TriMesh*/);
+  //void setPosition (dReal x, dReal y, dReal z)
+  //void setRotation (const dMatrix3 R)
+
+  /* collision */
   dGeom* geom[nol];
-  dGeom* gem_field = new dPlane (*space, 0/*x*/, 0/*y*/, 1/*z*/, -0.220 + 0.05/2.0/*d*/); /* ax + by + cz = d; */
+  //dGeom* gem_field = new dPlane (*space, 0/*x*/, 0/*y*/, 1/*z*/, -0.220 + 0.05/2.0/*d*/); /* ax + by + cz = d; */
   geom[0] = new dBox (*space, 0.320, 0.220, 0.030); /* lx, ly, lz */
+  //geom[0] = new dSphere (*space, 0.03);
   geom[0]->setBody(link[0].id());
+  std::cout << "GEOM_ID: " << "K" << " " << TriMesh << std::endl;
+  //std::cout << "GEOM_ID: " << "F" << " " << gem_field->id() << std::endl;
+  std::cout << "GEOM_ID: " <<  0  << " " << geom[0]->id() << std::endl;
   for (size_t i = 1; i < nol; i++) {
-    geom[i] = new dSphere (*space, 0.01);
+    //geom[i] = new dSphere (*space, 0.01);
+    if (i == 1 || i == 5 || i == 9 || i == 13) {
+      geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.02/*length*/);
+    } else {
+      geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.10 * 2.5/*length*/);
+    }
     geom[i]->setBody(link[i].id());
+
+    std::cout << "GEOM_ID: " << i << " " << geom[i]->id() << std::endl;
   }
 
   typedef struct {
@@ -452,20 +595,24 @@ int main()
     dJointGroup *jgrp;
     dSpace *space;
     dGeom* field;
+    dGeomID kawasaki_field;
+    ssg::Scene* scene;
   } ColData;
 
-  ColData coldata = {&world, &jgrp, space, gem_field};
+  ColData coldata = {&world, &jgrp, space, NULL/*gem_field*/, TriMesh, &scene};
 
   //typedef void(*CB)(void*,dGeomID,dGeomID);
   auto nearCb = static_cast<void(*)(void*data,dGeomID,dGeomID)>([&](void *data, dGeomID o1, dGeomID o2) {
     ColData *coldata = (ColData*)data;
 
-    dGeomID ground = coldata->field->id();
+    // TODO:
+    //dGeomID ground = coldata->field->id();
+    dGeomID ground = coldata->kawasaki_field;
     dWorld *world = coldata->world;
     dJointGroup* jgrp = coldata->jgrp;
 
     //std::cout << "nearCB: " << o1 << "," << o2 << std::endl;
-    static const int N = 4; // 接触点数の上限は4個
+    static const int N = 8; // 接触点数の上限は4個
   
     dContact contact[N+10];
 
@@ -473,6 +620,7 @@ int main()
     int n = dCollide(o1, o2, N, &contact[0].geom, sizeof(dContact)); // nは衝突点数
 
     if (isGround) {
+      //std::cout << "[" << n << "] : " << o1 << "," << o2 << std::endl;
       for (int i = 0; i < n; i++) {
         contact[i].surface.mode = dContactBounce; // 地面の反発係数を設定
         contact[i].surface.bounce = 0.00; // (0.0~1.0)   反発係数は0から1まで
@@ -484,6 +632,14 @@ int main()
         // 接触している２つのgeometryをコンタクトジョイントで拘束
         dJointAttach (c,dGeomGetBody(contact[i].geom.g1),
                                   dGeomGetBody(contact[i].geom.g2));
+
+        //std::cout << contact[i].geom.pos[0] << "," << contact[i].geom.pos[1] << "," << contact[i].geom.pos[2] << std::endl;
+        Eigen::Vector3f pos;
+        pos(0) = contact[i].geom.pos[0];
+        pos(1) = contact[i].geom.pos[1];
+        pos(2) = contact[i].geom.pos[2];
+        //auto point = std::make_shared<WiredSphere>(pos, 0.03, 8, 8);
+        //coldata->scene->AddObject(point);
       }
     }
     return;
@@ -491,7 +647,7 @@ int main()
 
   /**********************************************************************************************************/
 
-  usleep(4000*1000);
+  //usleep(4000*1000);
 
   //ウィンドウが開いている間繰り返す
   while (glfwWindowShouldClose(scene.RootWindow().WindowHandle()) == GL_FALSE)
@@ -502,23 +658,13 @@ int main()
     }
 
     const dReal* pos4 = link[0].getPosition();
-    /* ODE vec3 is 4*1 matrix */
-    Eigen::Vector3d pos;
-    for (int i = 0; i < 3; i++) {
-      pos(i) = pos4[i];
-    }
-    robot->WPos() = pos;
-    /* ODE mat3 is 3*4 matrix */
+    robot->WPos() = ode::vec32vec(pos4);
     const dReal* rot34 = link[0].getRotation();
-    Eigen::Matrix3d rot;
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        rot(i,j) = rot34[i*4 + j];
-      }
-    }
-    robot->WRot() = rot;
+    robot->WRot() = ode::mat32mat(rot34);
     robot->UpdateCasCoords();
-    sphere[0]->SetOffset(pos, rot);
+
+    /* TODO: body centre */
+    sphere[0]->SetOffset(robot->WPos(), robot->WRot());
 
     scene.Draw();
 
@@ -548,14 +694,12 @@ int main()
     //std::cout << "angle ----: " << angle[0] << "," << angle[1] << "," << angle[2] << "," << angle[3] << "," << angle[4] << std::endl;
     //std::cout << "posz  ----: " << posz[0] << "," << posz[1] << "," << posz[2] << "," << posz[3] << "," << posz[4] << std::endl;
    
-    //space->collide(0, std::is_same(decl_type(result_type(static_cast<void(*)(void*, dGeomID, dGeomID)>(nearCb)))));
     space->collide((void*)&coldata, nearCb);
     //world.step(0.0167);
-    //world.step(0.001);
-    world.step(0.003);
+    world.step(0.001);
+    //world.step(0.0001);
     jgrp.empty();
 
-    //world.setContactSurfaceLayer(0.01);
 #endif
   }
 

@@ -34,6 +34,9 @@ private:
 
   Eigen::Vector4f color_;
 
+protected:
+  ssg::Vertices vertices_;
+
 public:
   SceneObject(size_t nov) :
     vaos(nov), rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/,
@@ -44,6 +47,10 @@ public:
   };
 
   virtual ~SceneObject() {};
+
+  ssg::Vertices& GetVertices() {
+    return vertices_;
+  }
 
   errno_t SetTransformMatrixLocId (GLint id) {
     if (id == -1) {
@@ -65,7 +72,7 @@ public:
     return 0;
   }
 
-  errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) {
+  errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
     coords_.Rot() = rot_;
     coords_.Pos() = pos_;
     rot_ = rot; /* TODO: to be deleted */

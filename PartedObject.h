@@ -24,7 +24,7 @@ class UniPartedObject : public SceneObject {
 private:
 
 protected:
-  ssg::Vertices vertices_;
+  //ssg::Vertices vertices_;
 
   std::vector<GLuint> indices_;
 
@@ -47,13 +47,17 @@ public:
 
   UniPartedObject() : SceneObject(1) {};
   virtual ~UniPartedObject() {};
+
+  std::vector<GLuint>& GetIndices() {
+    return indices_;
+  }
 };
 
 class BiPartedObject : public SceneObject {
 private:
 
 protected:
-  ssg::Vertices vertices_;
+  //ssg::Vertices vertices_;
 
   static const size_t kTopIdx = 0;
   static const size_t kBtmIdx = 1;
@@ -93,7 +97,7 @@ class TriPartedObject : public SceneObject {
 private:
 
 protected:
-  ssg::Vertices vertices_;
+  //ssg::Vertices vertices_;
 
   static const size_t kTopIdx = 0;
   static const size_t kSidIdx = 1;

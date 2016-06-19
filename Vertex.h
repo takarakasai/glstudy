@@ -42,6 +42,12 @@ namespace ssg {
     size_t size () {
       return poses.size();
     }
+
+    void offset (Eigen::Vector3f pos) {
+      for (auto &pose: poses) {
+        pose += pos;
+      }
+    }
   
     void rotate (Eigen::Matrix3f rot) {
       for (auto &pose: poses) {

@@ -28,7 +28,7 @@ public:
   //errno_t SetTransformMatrixLocId (GLint id) {return 0;};
 
   /* TODO */
-  virtual errno_t SetOffset(Eigen::Vector3d& pos, Eigen::Matrix3d& rot) = 0;
+  virtual errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) = 0;
   virtual errno_t SetColor(Eigen::Vector4d& color) = 0;
   //virtual errno_t SetScale(Dp::Math::real scale) = 0;
 

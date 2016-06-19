@@ -18,7 +18,7 @@ namespace ssg {
   private:
   
   public:
-    SolidMesh (const Eigen::Matrix3f &rot, const aiMesh* paiMesh, const Dp::Math::real scale = 1.0) {
+    SolidMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
       /* make vertices */
       const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
       for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
@@ -35,8 +35,9 @@ namespace ssg {
         //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
         //  paiMesh->HasTextureCoords(0) ? "True" : "False");
       }
-      vertices_.rotate(rot);
       vertices_.scale(scale);
+      vertices_.rotate(rot.cast<float>());
+      vertices_.offset(pos.cast<float>());
   
       /* make indices */
       for (unsigned int i = 0 ; i < paiMesh->mNumFaces ; i++) {
@@ -53,7 +54,7 @@ namespace ssg {
       BuildObject(GL_TRIANGLES);
     }
 
-    SolidMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :SolidMesh(Eigen::Matrix3f::Identity(), paiMesh, scale){}
+    //SolidMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :SolidMesh(paiMesh, scale, Eigen::Matrix3f::Identity()){}
   };
 
   class WiredMesh : public UniPartedObject {
@@ -104,7 +105,8 @@ namespace ssg {
 
 
 
-  std::shared_ptr<SceneObject> ImportObject (std::string file_name, Dp::Math::real scale = 1.0) {
+  std::shared_ptr<SolidMesh> ImportObject (
+          std::string file_name, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
     Assimp::Importer Importer;
   
     const aiScene* pScene = 
@@ -121,7 +123,7 @@ namespace ssg {
 
     if (pScene->mNumMeshes == 1) {
       printf("NumMeshes == 1 ==> UniMesh\n");
-      return std::make_shared<SolidMesh>(pScene->mMeshes[0], scale);
+      return std::make_shared<SolidMesh>(pScene->mMeshes[0], scale, rot, pos);
     }
 
     printf("NumMeshes > 1 not supported\n");
