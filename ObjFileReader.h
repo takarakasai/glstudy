@@ -110,7 +110,7 @@ namespace ssg {
       ifs >> minval;
       ifs >> maxval;
 
-      joint.SetRange(idx, minval, maxval);
+      joint.SetRange(idx, Dp::Math::deg2rad(minval), Dp::Math::deg2rad(maxval));
       return 0;
   }
   static errno_t parseJointRange (std::ifstream &ifs, Link &link) {

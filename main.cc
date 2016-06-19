@@ -479,6 +479,7 @@ int main()
 
     dHingeJoint* jnt;
     joint[j] = jnt = new dHingeJoint(world, 0);
+    // dParamLoStop, angle – 0.001f
     /* 根元リンクはBaseに拘束する */
     if (j == 1 || j == 5 || j == 9 || j == 13) {
       joint[j]->attach(link[0], link[j]);
@@ -490,6 +491,10 @@ int main()
     Eigen::Vector3d waxis = rlink->WRot() * rlink->GetJoint().Axis();
     std::cout << "WAXIS:" << waxis(0) << "," << waxis(1) << "," << waxis(2) << std::endl;
     jnt->setAxis(waxis(0), waxis(1), waxis(2));
+    jnt->setParam(dParamLoStop, -Dp::Math::deg2rad(60));
+    jnt->setParam(dParamHiStop, +Dp::Math::deg2rad(60));
+    //jnt->setParam(dParamLoStop, -(rlink->GetJoint().GetOffsetAngle() - Dp::Math::deg2rad(10)));
+    //jnt->setParam(dParamHiStop, -(rlink->GetJoint().GetOffsetAngle() + Dp::Math::deg2rad(10)));
   }
 #endif
   dJointGroup jgrp;

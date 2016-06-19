@@ -106,6 +106,7 @@ public:
   virtual errno_t SetOffsetValue (Dp::Math::real ovalue) {oval_(0) = ovalue; return 0;};
   virtual errno_t SetValue (Dp::Math::real value) {val_(0) = value; return 0;};
   virtual errno_t SetAngle (Dp::Math::real value) {val_(0) = value; return 0;};
+  virtual Dp::Math::real GetOffsetAngle () {return oval_(0);};
   virtual Dp::Math::real GetAngle () {return val_(0);};
 
   std::string& GetName() { return name_;};
@@ -156,6 +157,9 @@ public:
     return 0; 
   }
 
+  Dp::Math::real GetOffsetAngle () {
+    return oangle_;
+  }
   Dp::Math::real GetAngle () {
     return angle_;
   }
