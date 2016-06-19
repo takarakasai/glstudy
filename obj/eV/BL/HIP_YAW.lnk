@@ -2,9 +2,9 @@ RotaryLinkZ BL/HIP_YAW
 Shape obj/eV/BL/HIP_YAW.shp
 Hull obj/eV/BL/HIP_YAW.shp
 Inertia
-     0.2
+     0.075
      0.0 0.0 0.0
-     0.2 0.2 0.2
+     0.075 0.075 0.075
      0.0 0.0 0.0
 JointRange 0 -180.0 180.0
 JointInertia 0 0

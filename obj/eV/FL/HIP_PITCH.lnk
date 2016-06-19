@@ -2,9 +2,9 @@ RotaryLinkY FL/HIP_PITCH
 Shape obj/eV/FL/HIP_PITCH.shp
 Hull obj/eV/FL/HIP_PITCH.shp
 Inertia
-     0.2
+     0.075
      0.0 0.0 0.05
-     0.2 0.2 0.20
+     0.075 0.075 0.075
      0.0 0.0 0.0
 JointRange 0 -180.0 180.0
 JointInertia 0 0

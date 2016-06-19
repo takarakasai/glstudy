@@ -2,9 +2,9 @@ RotaryLinkY BL/KNEE_PITCH
 Shape obj/eV/BL/KNEE_PITCH.shp
 Hull obj/eV/BL/KNEE_PITCH.shp
 Inertia
-     0.2
+     0.075
      0.0 0.0 0.05
-     0.2 0.2 0.2
+     0.075 0.075 0.075
      0.0 0.0 0.0
 JointRange 0 -180.0 180.0
 JointInertia 0 0

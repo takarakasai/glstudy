@@ -2,9 +2,9 @@ RotaryLinkY FR/ANKLE_PITCH
 Shape obj/eV/FR/ANKLE_PITCH.shp
 Hull obj/eV/FR/ANKLE_PITCH.shp
 Inertia
-     0.1
+     0.070
      0.0 0.0 0.02
-     0.1 0.1 0.1
+     0.070 0.070 0.070
      0.0 0.0 0.0
 JointRange 0 -180.0 180.0
 JointInertia 0 0
