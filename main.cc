@@ -320,7 +320,7 @@ namespace ode {
     return mat;
   }
 
-  Eigen::Vector3d vec2vec3 (const Eigen::Vector3d vec, dReal *vec3) {
+  Eigen::Vector3d vec2vec3 (const Eigen::Vector3d& vec, dReal *vec3) {
     /* ODE vec3 is 4*1 matrix */
     for (int i = 0; i < 3; i++) {
       vec3[i] = vec(i);
@@ -330,7 +330,7 @@ namespace ode {
     return vec;
   }
 
-  Eigen::Matrix3d mat2mat3 (const Eigen::Matrix3d mat,  dReal *mat3) {
+  Eigen::Matrix3d mat2mat3 (const Eigen::Matrix3d& mat,  dReal *mat3) {
     /* ODE mat3 is 3*4 matrix */
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
@@ -391,7 +391,7 @@ int main()
   //cmeasure.set_cout(true);
 
   /************************************* ODE ****************************************************************/
-  constexpr size_t nol = 3; //17;
+  constexpr size_t nol = 17;
   std::shared_ptr<WiredSphere> sphere[nol];
   std::string lname[] = {
     "Base",
@@ -448,17 +448,22 @@ int main()
     //std::cout << rlink->GetWCentroid() << std::endl;
     //std::cout << rlink->WPos() << std::endl;
 
-    //sphere[i] = std::make_shared<WiredSphere>(rlink->GetWCentroid().cast<float>(), 0.01, 20, 20);
     if (i == 0) {
       sphere[i] = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.03, 8, 8);
+    } else if (i == 1 || i == 5 || i == 9 || i == 13) {
+      //sphere[i] = std::make_shared<WiredCylinder>(Eigen::, , 0.01/*radius*/, 0.02/*length*/);
+      sphere[i] = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.01, 20, 20);
     } else {
+      //geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.10 * 2.5/*length*/);
       sphere[i] = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.01, 20, 20);
     }
     scene.AddObject(sphere[i]);
-    Eigen::Matrix3d rot = Eigen::Matrix3d::Identity();
-    sphere[i]->SetOffset(rlink->GetWCentroid(), rot);
+    sphere[i]->SetOffset(rlink->GetWCentroid(), rlink->WRot());
     auto color = Eigen::Vector4d{0.5,0.0,0.0,1.0};
     sphere[i]->SetColor(color);
+    dMatrix3 rot3;
+    ode::mat2mat3(rlink->WRot(), rot3);
+    link[i].setRotation(rot3);
     //link[i].setRotation(); // (dMatrix3)
   }
 
@@ -491,83 +496,20 @@ int main()
   dSpace* space = new dHashSpace();
 
   /* mesh */
-  Vector3d _pos = (Vector3d){0.5,0.0,-0.150};
+  Vector3d _pos = (Vector3d){0.0,0.0,-0.350};
   Matrix3d _rot = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
   std::shared_ptr<ssg::SolidMesh> kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001, _rot, _pos);
   scene.AddObject(kawasaki_field);
+
+  dTriMeshDataID Data = dGeomTriMeshDataCreate();
   ssg::Vertices& verts = kawasaki_field->GetVertices();
   std::vector<GLuint>& idx = kawasaki_field->GetIndices();
-  std::vector<Eigen::Vector3f> verts1;
-  std::vector<Eigen::Vector3d> verts2;
-  std::vector<Eigen::Vector3f> norms1;
-  std::vector<Eigen::Vector3d> norms2;
-  std::vector<GLuint> idx_;
-  dReal verts3[verts.poses.size()*3];
-  dReal norms3[verts.poses.size()*3];
-  dReal verts4[3*6] = {
-    -1.0, -1.0, -0.220 + 0.05/2.0,
-    +1.0, +1.0, -0.220 + 0.05/2.0,
-    -1.0, +1.0, -0.220 + 0.05/2.0,
-
-    -1.0, -1.0, -0.220 + 0.05/2.0,
-    -1.0, +1.0, -0.220 + 0.05/2.0,
-    +1.0, +1.0, -0.220 + 0.05/2.0
-  };
-  dTriIndex idx4[6] = {
-    1,2,3,
-    4,5,6
-  };
-  size_t i = 0;
-  for (auto &pos: verts.poses) {
-    Eigen::Vector3d tmp = pos.cast<double>();
-    Eigen::Vector3d norm = verts.norms[i].cast<double>();
-    //tmp  = _pos + _rot * tmp;
-    
-    //norm =        _rot * norm;
-    verts1.push_back(tmp.cast<float>());
-    verts2.push_back(tmp);
-    verts3[i*3+0] = tmp(0);
-    verts3[i*3+1] = tmp(1);
-    verts3[i*3+2] = tmp(2);
-    norms1.push_back(norm.cast<float>());
-    norms2.push_back(norm);
-    norms3[i*3+0] = norm(0);
-    norms3[i*3+1] = norm(1);
-    norms3[i*3+2] = norm(2);
-    i++;
-    std::cout << std::fixed << std::showpos << std::setprecision(3) << tmp(0) << "," << tmp(1) << "," << tmp(2) << std::endl;
-  }
-  std::vector<dTriIndex> idx2;
-  dTriIndex idx3[idx.size()];
-  i = 0;
-  for (auto &i: idx) {
-    idx_.push_back(i);
-    idx2.push_back(i);
-    idx3[i] = i;
-    i++;
-  }
-  std::cout << idx.size() << ":" << verts2.size() << std::endl;
-  std::cout << "sizeof:" << sizeof(GLuint) << ":" << sizeof(Eigen::Vector3f) << std::endl;
-  dTriMeshDataID Data = dGeomTriMeshDataCreate();
-  /* TODO:フィールドオブジェクトの参照の値を利用するとNG　配列かベクタに入れ直すとOK(要原因調査) */
   dGeomTriMeshDataBuildSingle1(
             Data,
-            //&verts1[0], 3 * sizeof(float), verts.poses.size(),
             &verts.poses[0], 3 * sizeof(float), verts.poses.size(),
-            &idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&verts.norms[0]);
-            //&idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&norms1[0]);
-  //dGeomTriMeshDataBuildDouble1(
-  //          Data,
-  //          &verts2[0], 3 * sizeof(double), verts.poses.size(),
-  //          &idx_[0], idx.size(), 3*sizeof(GLuint), (void*)&norms2[0]);
-  //dGeomTriMeshDataBuildDouble1(
-  //          Data,
-  //          verts3, 3 * sizeof(double), verts.poses.size(),
-  //          idx3, idx.size(), 3*sizeof(GLuint), (void*)norms3);
+            &idx[0], idx.size(), 3*sizeof(GLuint), (void*)&verts.norms[0]);
   dGeomID TriMesh = dCreateTriMesh(space->id()/*spaceID*/, Data, NULL, NULL, NULL);
   dGeomSetData(TriMesh/*geomID*/, Data/*TriMesh*/);
-  //void setPosition (dReal x, dReal y, dReal z)
-  //void setRotation (const dMatrix3 R)
 
   /* collision */
   dGeom* geom[nol];
@@ -583,7 +525,7 @@ int main()
     if (i == 1 || i == 5 || i == 9 || i == 13) {
       geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.02/*length*/);
     } else {
-      geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.10 * 2.5/*length*/);
+      geom[i] = new dCylinder (*space, 0.01/*radius*/, 0.10/*length*/);
     }
     geom[i]->setBody(link[i].id());
 
