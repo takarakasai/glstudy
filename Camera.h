@@ -48,7 +48,7 @@ namespace ssg {
 
     Camera& operator+=(Real dpos) {
       Eigen::Vector3d dir = Dir();
-      std::cout << "DIR:" <<  dir << "   :" << dpos << std::endl;
+      //std::cout << "DIR:" <<  dir << "   :" << dpos << std::endl;
       pos += dir * dpos;
       dir_to += dir * dpos;
       return (*this);
