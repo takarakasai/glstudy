@@ -166,7 +166,7 @@ namespace ssg {
       
       std::cout << "IDS:" << projMatLoc_ << ", " << trnsMatLoc_ << ", " << mateMatLoc_ << std::endl;
 
-      cmeasure.set_cout(true);
+      //cmeasure.set_cout(true);
     }
 
     virtual ~Scene() {
@@ -663,7 +663,7 @@ int main()
     double Kp = 30;
     // [kgf-cm]
     //const double KRS2572HV_MAX_TRQ  = 25.0;
-    const double KRS6003RHV_MAX_TRQ = 67.0 * 3;
+    const double KRS6003RHV_MAX_TRQ = 67.0 * 100;
     // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
     //const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13);
     const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * 100;
@@ -686,12 +686,12 @@ int main()
       if (cspd < 0) {
         if (-cspd > (TARGET_MAX_SPD)){
           cspd = -(TARGET_MAX_SPD);
-          islimit = true;
+          //islimit = true;
         }
       } else {
         if ( cspd > TARGET_MAX_SPD){
           cspd =  TARGET_MAX_SPD;
-          islimit = true;
+          //islimit = true;
         }
       }
       joint[j]->setParam(dParamVel, -cspd);
@@ -722,6 +722,7 @@ int main()
           jf->t2[0], jf->t2[1], jf->t2[2]);
       */
     }
+    ismax = false;
     if (ismax) {
       for (size_t i = 1; i < nol; i++){
         //printf(" %+012.4lf", Dp::Phyx::Nm2Kgcm(jtrq_max[i]));
@@ -732,6 +733,13 @@ int main()
       }
       printf("\n");
     }
+    //for (size_t i = 1; i < nol; i++){
+    //  dJointFeedback* jf;
+    //  jf = joint[i]->getFeedback();
+    //  printf(",%+8.3lf", Dp::Phyx::Nm2Kgcm(jf->t2[i]));
+    //}
+    //printf("\n");
+    printf("%lf, %lf, %lf\n", robot->WPos()(0), robot->WPos()(1), robot->WPos()(2));
 
     /*********  simulation side *************************/
 #if 1 
