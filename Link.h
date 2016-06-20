@@ -181,6 +181,9 @@ public:
   virtual errno_t SetTransformMatrixLocId (int32_t id) {
     return 0;
   }
+  virtual errno_t SetTextureLocId (int32_t id) {
+    return 0;
+  }
   virtual errno_t SetMaterialColorLocId (int32_t id) {
     return 0;
   }

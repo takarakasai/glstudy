@@ -93,5 +93,18 @@ namespace ssg {
     return verts;
   }
 
+  Vertices planeVertices (Eigen::Vector3f pos, GLfloat width, GLfloat height) {
+    Vertices verts;
+  
+    auto lx = width  / 2.0;
+    auto ly = height / 2.0;
+  
+    verts.push(Eigen::Vector3f(-lx, -ly, 0) + pos, Eigen::Vector3f(0, 0, 1.0), Eigen::Vector2f(-1.0, -1.0));
+    verts.push(Eigen::Vector3f(-lx, +ly, 0) + pos, Eigen::Vector3f(0, 0, 1.0), Eigen::Vector2f(-1.0, +1.0));
+    verts.push(Eigen::Vector3f(+lx, -ly, 0) + pos, Eigen::Vector3f(0, 0, 1.0), Eigen::Vector2f(+1.0, -1.0));
+    verts.push(Eigen::Vector3f(+lx, +ly, 0) + pos, Eigen::Vector3f(0, 0, 1.0), Eigen::Vector2f(+1.0, +1.0));
+  
+    return verts;
+  }
 }
 

@@ -23,8 +23,11 @@
 
 class SceneObject : public vaos, public/*implement*/ InterfaceSceneObject {
 private:
+  texture tex;
+
   GLint gl_tmat_loc_id_;
   GLint gl_color_loc_id_;
+  GLint gl_tex_loc_id_;
   
   /* TODO integ constructor's rot/pos */
   Eigen::Matrix3d rot_; /* TODO: */
@@ -38,18 +41,23 @@ protected:
   ssg::Vertices vertices_;
 
 public:
-  SceneObject(size_t nov) :
-    vaos(nov), rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/,
+  /* TODO */
+  SceneObject(size_t nov, GLenum target = GL_INVALID_ENUM) : 
+    vaos(nov), tex(target),
+    rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/,
     color_(0.5,0.5,0.5,1.0) {
-    gl_tmat_loc_id_ = -1;
     coords_.Rot() = Eigen::Matrix3d::Identity();
     coords_.Pos() = Eigen::Vector3d::Zero();
-  };
+  }
 
   virtual ~SceneObject() {};
 
   ssg::Vertices& GetVertices() {
     return vertices_;
+  }
+
+  texture& GetTexture() {
+    return tex;
   }
 
   errno_t SetTransformMatrixLocId (GLint id) {
@@ -68,6 +76,16 @@ public:
     }
 
     gl_color_loc_id_ = id;
+
+    return 0;
+  }
+
+  errno_t SetTextureLocId (GLint id) {
+    if (id == -1) {
+      return EINVAL;
+    }
+
+    gl_tex_loc_id_ = id;
 
     return 0;
   }
@@ -118,8 +136,17 @@ public:
     glUniformMatrix4fv(gl_tmat_loc_id_, 1, GL_FALSE, transformMatrix);
     /* material color */
     glUniform4fv(gl_color_loc_id_, 1, &color_(0));
+    /* texture */
+    if (vertices_.texs.size() > 0) {
+      glUniform1i(gl_tex_loc_id_, GL_TEXTURE0 + tex.GetId());
+      ECALL(tex.bind());
+    }
 
     ECALL(vaos::Draw());
+
+    if (vertices_.texs.size() > 0) {
+      ECALL(tex.unbind());
+    }
     return 0;
   }
 
@@ -145,8 +172,17 @@ public:
     glUniformMatrix4fv(gl_tmat_loc_id_, 1, GL_FALSE, transformMatrix);
     /* material color */
     glUniform4fv(gl_color_loc_id_, 1, &color_(0));
+    /* texture */
+    if (vertices_.texs.size() > 0) {
+      glUniform1i(gl_tex_loc_id_, GL_TEXTURE0 + tex.GetId());
+      ECALL(tex.bind());
+    }
 
     ECALL(vaos::Draw());
+
+    if (vertices_.texs.size() > 0) {
+      ECALL(tex.unbind());
+    }
     return 0;
   }
 

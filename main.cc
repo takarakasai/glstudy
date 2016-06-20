@@ -148,6 +148,7 @@ namespace ssg {
     GLuint program_;
     GLint projMatLoc_;
     GLint trnsMatLoc_;
+    GLint texLoc_;
     GLint mateMatLoc_;
 
     cycle_measure cmeasure;//(10);
@@ -155,18 +156,19 @@ namespace ssg {
 
     Scene() : cmeasure(10) {
       program_ = ssg::loadProgram(
-        "./shader/point.vert", {"pv", "normal"},
+        "./shader/point.vert", {"pv", "normal", "tex"},
         "./shader/point.frag", "fc");
 
       std::cout << program_ << ":PROGRAM" << std::endl;
 
       projMatLoc_ = glGetUniformLocation(program_, "projectionMatrix");
       trnsMatLoc_ = glGetUniformLocation(program_, "transformMatrix");
+      texLoc_     = glGetUniformLocation(program_, "texDiff");
       mateMatLoc_ = glGetUniformLocation(program_, "materialColor");
       
       std::cout << "IDS:" << projMatLoc_ << ", " << trnsMatLoc_ << ", " << mateMatLoc_ << std::endl;
 
-      cmeasure.set_cout(true);
+      //cmeasure.set_cout(true);
     }
 
     virtual ~Scene() {
@@ -185,6 +187,7 @@ namespace ssg {
     errno_t AddObject (std::shared_ptr<InterfaceSceneObject> obj) {
       obj->SetTransformMatrixLocId(trnsMatLoc_);
       obj->SetMaterialColorLocId(mateMatLoc_);
+      obj->SetTextureLocId(texLoc_);
 
       objs_.push_back(obj);
       return 0;
@@ -296,6 +299,12 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 
 #include "ode/ode.h"
 #include "ode/collision_trimesh.h"
+
+#include <SDL2/SDL_ttf.h>
+//#include <FTGL/FTGLPolygonFont.h>
+//#include <FTGL/ftgl.h>
+
+const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
 
 namespace ode {
   Eigen::Vector3d vec32vec (const dReal *vec3) {
@@ -637,6 +646,29 @@ int main()
     ref_angle[j] = rlink->GetJoint().GetAngle();
   }
 
+  /*** FTGL/SDL_ttf ***/
+  //auto font = new FTGLPolygonFont(FONT);
+  //if (font->Error()) exit(1);                        // can't open font file
+  //if (!font->FaceSize(1.0)) exit(1);                // can't set font size
+  //if (!font->CharMap(ft_encoding_unicode)) exit(1);  // can't set charmap 
+  //font->Render((wchar_t *)L"私のたわし");
+  TTF_Init();
+  TTF_Font *font = TTF_OpenFont(fontfile, 32);
+  SDL_Color font_color = { 255, 255, 255 };
+  SDL_Surface* tsurf = TTF_RenderUTF8_Blended(font, "魔法少女", font_color);
+
+  std::cout << " width: " << tsurf->w << ", height:" << tsurf->h << std::endl;
+  //std::cout << "++++++++++++++++++:" << tsurf->format->format << std::endl;
+  std::cout << "++++++++++++++++++:" << tsurf->format->BitsPerPixel << std::endl;
+  printf(" %x , %x\n", tsurf->format->format, tsurf->format->BytesPerPixel);
+  printf(" %x\n",  GL_UNSIGNED_INT_8_8_8_8);
+
+  auto texobj = std::make_shared<SolidPlane>(Eigen::Vector3f(0.0,0.0,0.1), 1.0, 0.5);
+  texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT_8_8_8_8, tsurf->pixels);
+  //void setdata (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data)
+  //     Texture (no++, typeName.c_str(), width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+  scene.AddObject(texobj);
+
   size_t count = 0;
   //ウィンドウが開いている間繰り返す
   while (glfwWindowShouldClose(scene.RootWindow().WindowHandle()) == GL_FALSE)
@@ -663,7 +695,7 @@ int main()
     double Kp = 30;
     // [kgf-cm]
     //const double KRS2572HV_MAX_TRQ  = 25.0;
-    const double KRS6003RHV_MAX_TRQ = 67.0 * 3;
+    const double KRS6003RHV_MAX_TRQ = 67.0 * 100;
     // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
     //const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13);
     const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * 100;
@@ -686,12 +718,12 @@ int main()
       if (cspd < 0) {
         if (-cspd > (TARGET_MAX_SPD)){
           cspd = -(TARGET_MAX_SPD);
-          islimit = true;
+          //islimit = true;
         }
       } else {
         if ( cspd > TARGET_MAX_SPD){
           cspd =  TARGET_MAX_SPD;
-          islimit = true;
+          //islimit = true;
         }
       }
       joint[j]->setParam(dParamVel, -cspd);
@@ -722,6 +754,7 @@ int main()
           jf->t2[0], jf->t2[1], jf->t2[2]);
       */
     }
+    ismax = false;
     if (ismax) {
       for (size_t i = 1; i < nol; i++){
         //printf(" %+012.4lf", Dp::Phyx::Nm2Kgcm(jtrq_max[i]));
@@ -732,6 +765,13 @@ int main()
       }
       printf("\n");
     }
+    //for (size_t i = 1; i < nol; i++){
+    //  dJointFeedback* jf;
+    //  jf = joint[i]->getFeedback();
+    //  printf(",%+8.3lf", Dp::Phyx::Nm2Kgcm(jf->t2[i]));
+    //}
+    //printf("\n");
+    printf("%lf, %lf, %lf\n", robot->WPos()(0), robot->WPos()(1), robot->WPos()(2));
 
     /*********  simulation side *************************/
 #if 1 
@@ -766,6 +806,9 @@ int main()
 #endif
     count++;
   }
+
+  TTF_CloseFont(font);
+  TTF_Quit();
 
   return 0;
 }

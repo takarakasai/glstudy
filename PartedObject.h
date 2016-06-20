@@ -43,9 +43,14 @@ public:
     vaos::operator[](0).setup(draw_mode, idx->size());
     vaos::operator[](0).setvbo(0, idx, vert);
     vaos::operator[](0).setvbo(1, norm);
+    if (vertices_.texs.size() > 0) {
+      auto tex = std::make_shared<vbo>(GL_ARRAY_BUFFER);
+      tex->setdata(vertices_.texs);
+      vaos::operator[](0).setvbo(2, tex);
+    }
   };
 
-  UniPartedObject() : SceneObject(1) {};
+  UniPartedObject() : SceneObject(1, GL_TEXTURE_2D) {};
   virtual ~UniPartedObject() {};
 
   std::vector<GLuint>& GetIndices() {

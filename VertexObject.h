@@ -26,6 +26,71 @@
  *  pn : patitioning number
  * */
 
+class texture {
+private:
+  GLuint id_;
+  GLenum target_;
+
+  GLsizei width_;
+  GLsizei height_;
+
+  GLenum format_;
+  GLenum type_;
+
+public:
+
+  texture(GLenum target) : target_(target), width_(0), height_(0) {
+    glGenTextures(1, &id_);
+    return;
+  }
+
+  virtual ~texture() {
+    glDeleteTextures(1, &id_);
+    DPRINTF(" glDeleteTextures: (0x%0x) 0x%x\n", target_, id_);
+    return;
+  }
+
+  GLuint GetId (){
+    return id_;
+  }
+
+  errno_t bind () {
+    glBindTexture(target_, id_);
+    DPRINTF(" glBindTexture: 0x%0x 0x%x\n", target_, id_);
+    return 0;
+  }
+
+  errno_t unbind (void) {
+    glBindBuffer(target_, 0);
+    DPRINTF(" glBindTexture: 0x%0x 0x%x -- unbind\n", target_, id_);
+    return 0;
+  }
+
+  void setdata (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data) {
+    bind();
+
+    width_ = width;
+    height_ = height;
+
+    format_ = format;
+    type_ = type;
+
+    glTexImage2D(target_, 0/*level*/, GL_RGB/*internal format*/,
+                 width_, height_, 0/*border*/, format_, type_, data);
+    glGenerateMipmap(target_);
+  
+    /* Parameters */
+    glTexParameteri(target_, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(target_, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(target_, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(target_, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+
+    DPRINTF(" glTexImage2D : TGT:0x%0x ID:0x%0x\n", target_, id_);
+
+    unbind();
+  }
+};
+
 class vbo {
 private:
   //using namespace std;
@@ -51,6 +116,10 @@ public:
   virtual ~vbo() {
     glDeleteBuffers(1, &id);
     DPRINTF(" glDeleteBuffers: (0x%0x) 0x%x\n", buffer_id_, id);
+  }
+
+  GLuint GetId (){
+    return id;
   }
 
   size_t size() {
@@ -85,6 +154,19 @@ public:
     data_size_ = sizeof(vertices[0]);
 
     glBufferData(buffer_id_, size_ * data_size_, &vertices[0], GL_STATIC_DRAW);
+    DPRINTF(" glBufferData 3f: 0x%0x\n", buffer_id_);
+
+    unbind();
+  }
+
+  void setdata (std::vector<Eigen::Vector2f>& normals) {
+    bind();
+    /* vec3 --> 3 * sizeof(GLfloat) [byte] = noe_ * sizeof(GLfloat) = data_size_ */
+    size_ = normals.size();
+    noe_ = sizeof(normals[0]) / sizeof(normals[0][0]);
+    data_size_ = sizeof(normals[0]);
+
+    glBufferData(buffer_id_, size_ * data_size_, &normals[0], GL_STATIC_DRAW);
     DPRINTF(" glBufferData 3f: 0x%0x\n", buffer_id_);
 
     unbind();

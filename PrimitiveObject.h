@@ -28,6 +28,69 @@
 
 #include <math.h>
 
+class PlaneBase : public UniPartedObject {
+private:
+  GLfloat width_;
+  GLfloat height_;
+
+public:
+
+  PlaneBase (
+      const Eigen::Matrix3f &rot, Eigen::Vector3f pos,
+      GLfloat width, GLfloat height)
+    : width_(width), height_(height) {
+
+    /* make vertices */
+    vertices_ = ssg::planeVertices(pos, width_, height_);
+
+    vertices_.rotate(rot);
+  }
+
+  GLfloat GetWidth()  { return width_;}
+  GLfloat GetHeight() { return height_;}
+};
+
+class SolidPlane : public PlaneBase {
+private:
+
+public:
+  SolidPlane (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat height)
+    : PlaneBase(rot, pos, width, height) {
+
+    indices_.push_back(0);
+    indices_.push_back(2);
+    indices_.push_back(1);
+    indices_.push_back(3);
+
+    BuildObject();
+  }
+  SolidPlane (Eigen::Vector3f pos, GLfloat width, GLfloat height)
+    : SolidPlane(Eigen::Matrix3f::Identity(), pos, width, height) {
+  }
+};
+
+class WiredPlane : public PlaneBase {
+private:
+
+public:
+  WiredPlane (const Eigen::Matrix3f &rot, Eigen::Vector3f pos, GLfloat width, GLfloat height)
+    : PlaneBase(rot, pos, width, height) {
+
+    indices_.push_back(1);
+    indices_.push_back(0);
+    indices_.push_back(2);
+
+    indices_.push_back(1);
+    indices_.push_back(3);
+    indices_.push_back(2);
+
+    BuildObject((const int){GL_LINE_STRIP});
+  }
+  WiredPlane (Eigen::Vector3f pos, GLfloat width, GLfloat height)
+    : WiredPlane(Eigen::Matrix3f::Identity(), pos, width, height) {
+  }
+};
+
 class RectangularBase : public UniPartedObject {
 private:
   GLfloat width_;
@@ -434,6 +497,13 @@ public:
   }
 
   /* TODO to be removed */
+  errno_t SetTextureLocId (GLint id) {
+    ECALL(wired_.SetTextureLocId(id));
+    ECALL(solid_.SetTextureLocId(id));
+    return 0;
+  }
+
+  /* TODO to be removed */
   errno_t SetMaterialColorLocId (GLint id) {
     ECALL(wired_.SetMaterialColorLocId(id));
     ECALL(solid_.SetMaterialColorLocId(id));
@@ -458,9 +528,11 @@ public:
     return 0;
   }
 
-  SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
+  SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat height);
 
   SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height);
+
+  SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
 
   errno_t SetDrawMode(DrawMode mode) {
     mode_ = mode;
@@ -477,14 +549,19 @@ public:
   }
 };
 
-template<> SwitchableSceneObject<WiredCylinder, SolidCylinder>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
-    : mode_(SOLID), wired_(rot, pos, radius, height, sectors), solid_(rot, pos, radius, height, sectors) {
-  };
+template<> SwitchableSceneObject<WiredPlane, SolidPlane>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat height) 
+    : mode_(SOLID), wired_(rot, pos, width, height), solid_(rot, pos, width, height) {
+  }
 
 template<> SwitchableSceneObject<WiredRectangular, SolidRectangular>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height) 
     : mode_(SOLID), wired_(rot, pos, width, length, height), solid_(rot, pos, width, length, height) {
   }
 
+template<> SwitchableSceneObject<WiredCylinder, SolidCylinder>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors)
+    : mode_(SOLID), wired_(rot, pos, radius, height, sectors), solid_(rot, pos, radius, height, sectors) {
+  };
+
+typedef SwitchableSceneObject<WiredPlane      , SolidPlane      > Plane;
 typedef SwitchableSceneObject<WiredRectangular, SolidRectangular> Rectangular;
 typedef SwitchableSceneObject<WiredCylinder   , SolidCylinder   > Cylinder;
 

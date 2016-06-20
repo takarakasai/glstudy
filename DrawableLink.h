@@ -112,6 +112,16 @@ namespace ssg {
       return 0;
     }
 
+    errno_t SetTextureLocId (int32_t id) {
+      for (auto &obj : objs_) {
+        obj->SetTextureLocId(id);
+      }
+      for (auto &link : clinks_) {
+        link->SetTextureLocId(id);
+      }
+      return 0;
+    }
+
     errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
       return -1;
     }

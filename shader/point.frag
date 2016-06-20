@@ -1,7 +1,9 @@
 #version 150 core
 in vec4 f_pos;
 in vec3 f_normal;
+in vec2 f_tex;
 uniform vec4 materialColor;
+uniform sampler2D texDiff;
 out vec4 fc;
 void main()
 {
@@ -29,5 +31,7 @@ void main()
   vec3 specular = pow(max(dot(normalize(halfv), normalize(lightDir)), 0.0), 20/*shininess*/) * lightColor.xyz;
 
   vec3 xyz = (ambient + diffuse + specular) * objectColor.xyz;
-  fc = vec4(xyz, objectColor.a);
+  //fc = vec4(xyz, objectColor.a);
+  fc = vec4(xyz, objectColor.a) + texture2D(texDiff, f_tex);
+  //fc = texture2D(texDiff, f_tex);
 }

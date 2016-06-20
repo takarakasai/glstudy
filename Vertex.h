@@ -74,6 +74,7 @@ namespace ssg {
  
   Vertices rectangularVertices (Eigen::Vector3f pos, GLfloat width, GLfloat length, GLfloat height);
 
+  Vertices planeVertices (Eigen::Vector3f pos, GLfloat width, GLfloat height);
 }
 
 #endif

@@ -23,7 +23,8 @@ if(APPLE)
   set(EXTRA_LIBS glfw3 ${OpenGL_LIBRARY})
 else()
     #set(EXTRA_LIBS glfw GL)
-  set(EXTRA_LIBS glfw GL ode)
+    #set(EXTRA_LIBS glfw GL ode)
+    set(EXTRA_LIBS glfw GL ode SDL2_ttf)
 endif()
 
 link_libraries(
