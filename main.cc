@@ -214,6 +214,7 @@ namespace ssg {
        glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
        glEnable(GL_DEPTH_TEST);
        glDepthFunc(GL_LEQUAL);
+       //glDepthFunc(GL_CULL_FACE);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // start using shader program
@@ -654,17 +655,30 @@ int main()
   //font->Render((wchar_t *)L"私のたわし");
   TTF_Init();
   TTF_Font *font = TTF_OpenFont(fontfile, 32);
-  SDL_Color font_color = { 255, 255, 255 };
-  SDL_Surface* tsurf = TTF_RenderUTF8_Blended(font, "魔法少女", font_color);
+                         /*G R */
+  SDL_Color font_color = { 255,255,255,128 }; /* ARGB */
+  SDL_Surface* tsurf = TTF_RenderUTF8_Blended(font, "C++17er", font_color);
 
   std::cout << " width: " << tsurf->w << ", height:" << tsurf->h << std::endl;
   //std::cout << "++++++++++++++++++:" << tsurf->format->format << std::endl;
   std::cout << "++++++++++++++++++:" << tsurf->format->BitsPerPixel << std::endl;
   printf(" %x , %x\n", tsurf->format->format, tsurf->format->BytesPerPixel);
-  printf(" %x\n",  GL_UNSIGNED_INT_8_8_8_8);
+  printf(" type:%x layout:%x, order:%x, %x\n",
+    SDL_PIXELTYPE(tsurf->format->format), SDL_PIXELLAYOUT(tsurf->format->format), SDL_PIXELORDER(tsurf->format->format),
+    SDL_BITSPERPIXEL(tsurf->format->format)); /* bits->20[bits] --> 2byte+4bit */
+  // SDL_PIXELTYPE_PACKED32,
+  // SDL_PACKEDORDER_BGRX ?
 
-  auto texobj = std::make_shared<SolidPlane>(Eigen::Vector3f(0.0,0.0,0.1), 1.0, 0.5);
+  double aspect = tsurf->h / (double)(tsurf->w);
+  auto texobj = std::make_shared<SolidPlane>(Eigen::Vector3f(0.0,0.0,0.1), 1.0, 1.0 * aspect);
+  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT, tsurf->pixels);
   texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT_8_8_8_8, tsurf->pixels);
+  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_BGRA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT_8_8_8_8, tsurf->pixels);
+  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/  GL_FLOAT, tsurf->pixels);
+  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/  GL_INT, tsurf->pixels);
+  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_8_8_8_8_REV, tsurf->pixels);
+  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_2_10_10_10_REV, tsurf->pixels);
+  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_10_10_10_2, tsurf->pixels);
   //void setdata (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data)
   //     Texture (no++, typeName.c_str(), width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
   scene.AddObject(texobj);
