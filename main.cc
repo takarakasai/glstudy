@@ -23,6 +23,8 @@
 // for sleep
 #include "unistd.h"
 
+#define WORLD_STEP 0.003
+
 
 #define DPRINTF(...) 
 
@@ -199,7 +201,7 @@ namespace ssg {
       //GLfloat vector4[4];
 
       static int count = 0;
-      if (count++ > 16) {
+      if (count++ > 10) {
         count = 0;
       }
 
@@ -777,7 +779,7 @@ int main()
     cmeasure.update();
 
     std::string str;
-    str = " GL : " + std::to_string(cmeasure.FPS()) + "[fps]";
+    str = " GL : " + std::to_string(cmeasure.FPS() * (WORLD_STEP/0.001)) + "[fps]";
     SDL_FreeSurface(tsurf);
     //tsurf = TTF_RenderUTF8_Blended(font, str.c_str(), font_color);
     tsurf = TTF_RenderText_Blended(font, str.c_str(), font_color);
@@ -896,7 +898,7 @@ int main()
    
     space->collide((void*)&coldata, nearCb);
     //world.step(0.0167);
-    world.step(0.001);
+    world.step(WORLD_STEP);
     //world.step(0.0001);
     jgrp.empty();
 
