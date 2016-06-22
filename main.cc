@@ -112,8 +112,8 @@ namespace ssg {
       return camera_;
     }
 
-    static std::unique_ptr<Window> Create (size_t width, size_t height, std::string name, GLFWwindow *parent) {
-      GLFWwindow* window = glfwCreateWindow(width, height, name.c_str(), NULL, parent);
+    static std::unique_ptr<Window> Create (size_t width, size_t height, std::string name, GLFWmonitor *monitor, GLFWwindow *parent) {
+      GLFWwindow* window = glfwCreateWindow(width, height, name.c_str(), monitor, parent);
       return std::unique_ptr<Window>(new Window(window, width, height));
     }
 
@@ -242,6 +242,10 @@ namespace ssg {
 
       return 0;
     }
+    
+    double FPS() {
+      return cmeasure.FPS();
+    }
   };
 }
 
@@ -305,7 +309,9 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 //#include <FTGL/FTGLPolygonFont.h>
 //#include <FTGL/ftgl.h>
 
-const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
+//const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
+const char* fontfile = "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf";
+
 
 namespace ode {
   Eigen::Vector3d vec32vec (const dReal *vec3) {
@@ -356,9 +362,20 @@ namespace ode {
 int main()
 {
   ECALL(ssg::InitGlfw());
+
+  int nom = 0;
+  GLFWmonitor** monitors = glfwGetMonitors(&nom);
+  for (ssize_t i = 0; i < nom; i++) {
+    printf("[%zd] %s\n", i, glfwGetMonitorName(monitors[i]));
+  }
   
-  std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL);
-  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", window1->WindowHandle());
+  std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL, NULL);
+  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", NULL, window1->WindowHandle());
+
+  glfwSetWindowPos(window1->WindowHandle(), 0, 1200);
+  /* can use after GLFW3.2 */
+  //glfwSetWindowMonitor(window1->WindowHandle(), NULL, 0/*x*/, 0/*y*/, 680/*w*/, 480/*h*/, GLFW_DONT_CARE/*rate*/);
+
   window1->SetCurrent();
 
   ECALL(ssg::InitGlew());
@@ -570,7 +587,7 @@ int main()
   ColData coldata = {&world, &jgrp, space, NULL/*gem_field*/, TriMesh, &scene};
 
   //typedef void(*CB)(void*,dGeomID,dGeomID);
-  auto nearCb = static_cast<void(*)(void*data,dGeomID,dGeomID)>([&](void *data, dGeomID o1, dGeomID o2) {
+  auto nearCb = static_cast<void(*)(void*data,dGeomID,dGeomID)>([](void *data, dGeomID o1, dGeomID o2) {
     ColData *coldata = (ColData*)data;
 
     // TODO:
@@ -591,12 +608,13 @@ int main()
       //std::cout << "[" << n << "] : " << o1 << "," << o2 << std::endl;
       for (int i = 0; i < n; i++) {
         //contact[i].surface.mode = dContactBounce; // 地面の反発係数を設定
+        //contact[i].surface.mode = dContactBounce|dContactApprox1|dContactSoftERP|dContactSoftCFM;
         contact[i].surface.mode = dContactBounce|dContactApprox1|dContactSoftERP|dContactSoftCFM;
         contact[i].surface.mu   = 1.0; // dInfinity;
         contact[i].surface.soft_erp = 1.0; //1.0;
         contact[i].surface.soft_cfm = 1e-10;
         contact[i].surface.bounce = 0.00; // (0.0~1.0)   反発係数は0から1まで
-        contact[i].surface.bounce_vel = 0.60; // (0.0以上)   反発に必要な最低速度
+        contact[i].surface.bounce_vel = 10.0; // (0.0以上)   反発に必要な最低速度
   
         // コンタクトジョイント生成                        
         dJointID c = dJointCreateContact(world->id(), jgrp->id(), &contact[i]);
@@ -648,40 +666,93 @@ int main()
   }
 
   /*** FTGL/SDL_ttf ***/
-  //auto font = new FTGLPolygonFont(FONT);
-  //if (font->Error()) exit(1);                        // can't open font file
-  //if (!font->FaceSize(1.0)) exit(1);                // can't set font size
-  //if (!font->CharMap(ft_encoding_unicode)) exit(1);  // can't set charmap 
-  //font->Render((wchar_t *)L"私のたわし");
   TTF_Init();
-  TTF_Font *font = TTF_OpenFont(fontfile, 32);
-                         /*G R */
-  SDL_Color font_color = { 255,255,255,128 }; /* ARGB */
-  SDL_Surface* tsurf = TTF_RenderUTF8_Blended(font, "C++17er", font_color);
+  TTF_Font *font = TTF_OpenFont(fontfile, 30);
+                         /* R G B A - */
+  SDL_Color font_color = { 0, 255, 0,255 }; /* ARGB 0xAARRGGBB */
+  SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
+  //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
+  std::string tmp_str;
+  tmp_str = " GL : " + std::to_string(cmeasure.FPS()) + "[fps]";
+  SDL_Surface* tsurf = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
+  tmp_str = "SIM : " + std::to_string(cmeasure.FPS()) + "[fps]";
+  SDL_Surface* tsurf2 = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
 
-  std::cout << " width: " << tsurf->w << ", height:" << tsurf->h << std::endl;
-  //std::cout << "++++++++++++++++++:" << tsurf->format->format << std::endl;
-  std::cout << "++++++++++++++++++:" << tsurf->format->BitsPerPixel << std::endl;
-  printf(" %x , %x\n", tsurf->format->format, tsurf->format->BytesPerPixel);
-  printf(" type:%x layout:%x, order:%x, %x\n",
+  //Create a surface to the correct size in RGB format, and copy the old image
+  //                                                          depth      R          G         B          A
+  //SDL_Surface * s = SDL_CreateRGBSurface(0, tsurf->w, tsurf->h, 32, 0x000000ff,0x0000ff00,0x00ff0000,0xff000000);
+    // --> texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_RGBA, GL_UNSIGNED_BYTE /* NG: GL_UNSIGNED_INT_8_8_8_8 */, s->pixels);
+  SDL_Surface * s = SDL_CreateRGBSurface(0, tsurf->w, tsurf->h, 32, 0x00ff0000,0x0000ff00,0x000000ff,0xff000000);
+    // --> texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, s->pixels);
+  //SDL_Surface * s = SDL_CreateRGBSurface(0, tsurf->w, tsurf->h, 32, 0xff000000,0x00ff0000,0x0000ff00,0xff); // RGBA
+    // --> texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, s->pixels);
+  //SDL_Surface * s = SDL_CreateRGBSurface(0, tsurf->w, tsurf->h, 32, 0xff00, 0xff0000, 0xff000000, 0xff); // ARGB
+    // --> texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, s->pixels);
+  SDL_BlitSurface(tsurf, NULL, s, NULL);
+
+  printf(" %x(%d:%d) type:%x layout:%x, order:%x, %x R:%x G:%x B:%x A:%x\n", // ARGB  = 0xAARRGGBB
+    tsurf->format->format, tsurf->format->BytesPerPixel, tsurf->format->BitsPerPixel,
     SDL_PIXELTYPE(tsurf->format->format), SDL_PIXELLAYOUT(tsurf->format->format), SDL_PIXELORDER(tsurf->format->format),
-    SDL_BITSPERPIXEL(tsurf->format->format)); /* bits->20[bits] --> 2byte+4bit */
-  // SDL_PIXELTYPE_PACKED32,
-  // SDL_PACKEDORDER_BGRX ?
+    SDL_BITSPERPIXEL(tsurf->format->format), tsurf->format->Rmask, tsurf->format->Gmask, tsurf->format->Bmask, tsurf->format->Amask); /* bits->20[bits] --> 2byte+4bit */
+  printf(" %x(%d:%d) type:%x layout:%x, order:%x, %x R:%x G:%x B:%x A:%x\n", // ARGB  = 0xAARRGGBB
+    s->format->format, s->format->BytesPerPixel, s->format->BitsPerPixel,
+    SDL_PIXELTYPE(s->format->format), SDL_PIXELLAYOUT(s->format->format), SDL_PIXELORDER(s->format->format),
+    SDL_BITSPERPIXEL(s->format->format), s->format->Rmask, s->format->Gmask, s->format->Bmask, s->format->Amask); /* bits->20[bits] --> 2byte+4bit */
 
   double aspect = tsurf->h / (double)(tsurf->w);
-  auto texobj = std::make_shared<SolidPlane>(Eigen::Vector3f(0.0,0.0,0.1), 1.0, 1.0 * aspect);
-  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT, tsurf->pixels);
-  texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT_8_8_8_8, tsurf->pixels);
-  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_BGRA, /*GL_UNSIGNED_BYTE*/ GL_UNSIGNED_INT_8_8_8_8, tsurf->pixels);
-  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/  GL_FLOAT, tsurf->pixels);
-  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/  GL_INT, tsurf->pixels);
-  ////texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_8_8_8_8_REV, tsurf->pixels);
-  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_2_10_10_10_REV, tsurf->pixels);
-  //texobj->GetTexture().setdata(tsurf->w, tsurf->h, /*GL_RGBA*/ GL_RGBA, /*GL_UNSIGNED_BYTE*/   GL_UNSIGNED_INT_10_10_10_2, tsurf->pixels);
-  //void setdata (GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data)
-  //     Texture (no++, typeName.c_str(), width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+  Eigen::Matrix3f txtrot = AngleAxisf(Dp::Math::deg2rad(-90), Eigen::Vector3f::UnitY()).toRotationMatrix() *
+                           AngleAxisf(Dp::Math::deg2rad( 90), Eigen::Vector3f::UnitZ()).toRotationMatrix();
+
+  auto texobj = std::make_shared<SolidPlane>(txtrot, Eigen::Vector3f(0.0,0.0,0.3), 0.4, 0.4 * aspect);
+  auto clr = Eigen::Vector4d(1.0,1.0,1.0,0.0);
+  texobj->SetColor(clr);
+  texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
   scene.AddObject(texobj);
+
+  auto texobj2 = std::make_shared<SolidPlane>(txtrot, Eigen::Vector3f(0.0,0.0,0.3 + 0.4 * aspect), 0.4, 0.4 * aspect);
+  texobj2->SetColor(clr);
+  texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
+  scene.AddObject(texobj2);
+
+
+
+  uint32_t* buff = (uint32_t*)tsurf->pixels;
+  uint32_t* buff2 = (uint32_t*)s->pixels;
+  for (ssize_t i = 0; i < tsurf->w; i++) {
+    printf("---\n");
+    for (ssize_t j = 0; j < tsurf->h; j++) {
+      printf(" %08x", buff[i*tsurf->h + j]);
+    }
+    printf("\n");
+    for (ssize_t j = 0; j < tsurf->h; j++) {
+      printf(" %08x", buff2[i*tsurf->h + j]);
+    } 
+    printf("\n");
+  }
+  for (ssize_t i = 0; i < tsurf->h; i++) {
+    for (ssize_t j = 0; j < tsurf->w; j++) {
+      if (buff[i*tsurf->w + j] & 0xFF000000 == 0xFF000000) {
+        printf("*");
+      } else if (buff[i*tsurf->w + j] & 0xFF000000) {
+        printf(".");
+      } else {
+        printf(" ");
+      }
+    }
+    printf("\n");
+  }
+  for (ssize_t i = 0; i < tsurf->h; i++) {
+    for (ssize_t j = 0; j < tsurf->w; j++) {
+      if (buff[i*tsurf->w + j] & 0xFF000000 == 0xFF000000) {
+        printf("*");
+      } else if (buff2[i*tsurf->w + j] & 0xFF000000) {
+        printf(".");
+      } else {
+        printf(" ");
+      }
+    }
+    printf("\n");
+  }
 
   size_t count = 0;
   //ウィンドウが開いている間繰り返す
@@ -704,6 +775,18 @@ int main()
     scene.Draw();
 
     cmeasure.update();
+
+    std::string str;
+    str = " GL : " + std::to_string(cmeasure.FPS()) + "[fps]";
+    SDL_FreeSurface(tsurf);
+    //tsurf = TTF_RenderUTF8_Blended(font, str.c_str(), font_color);
+    tsurf = TTF_RenderText_Blended(font, str.c_str(), font_color);
+    SDL_FreeSurface(tsurf2);
+    str = "SIM : " + std::to_string(scene.FPS()) + "[fps]";
+    tsurf2 = TTF_RenderText_Blended(font, str.c_str(), font_color);
+
+    texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
+    texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
 
     /*********  controller side *************************/
     double Kp = 30;

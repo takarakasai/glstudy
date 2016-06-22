@@ -41,6 +41,7 @@ public:
 
   texture(GLenum target) : target_(target), width_(0), height_(0) {
     glGenTextures(1, &id_);
+    target_ = GL_TEXTURE_2D;
     return;
   }
 
@@ -75,7 +76,11 @@ public:
     format_ = format;
     type_ = type;
 
-    glTexImage2D(target_, 0/*level*/, GL_RGB/*internal format*/,
+    target_ = GL_TEXTURE_2D;
+    glTexImage2D(GL_TEXTURE_2D, 0/*level*/,  GL_RGBA8 /*internal format*/,
+    //glTexImage2D(GL_TEXTURE_2D, 0/*level*/,  GL_BGRA /*internal format*/,
+    //glTexImage2D(target_, 0/*level*/, GL_COMPRESSED_RGBA/*internal format*/,
+    //glTexImage2D(target_, 0/*level*/, GL_COMPRESSED_SRGB_ALPHA/*internal format*/,
                  width_, height_, 0/*border*/, format_, type_, data);
     glGenerateMipmap(target_);
   

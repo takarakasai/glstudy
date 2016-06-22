@@ -32,6 +32,14 @@ void main()
 
   vec3 xyz = (ambient + diffuse + specular) * objectColor.xyz;
   //fc = vec4(xyz, objectColor.a);
-  fc = vec4(xyz, objectColor.a) + texture2D(texDiff, f_tex);
+  // mix(x, y, a) == x*(1-a) + y*a
+  vec4 texmap = texture2D(texDiff, f_tex);
+  vec4 objmap = vec4(xyz, objectColor.a);
+  if (objectColor.a == 0) {
+    fc = mix(objmap, texmap, texmap.a);
+  } else {
+    fc = mix(texmap, objmap, objmap.a);
+  }
+  //fc = mix(vec4(xyz, objectColor.a), texmap, texmap.a);
   //fc = texture2D(texDiff, f_tex);
 }

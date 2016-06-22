@@ -33,6 +33,9 @@ private:
   uint16_t count_;
   bool is_cout_;
 
+  double spf_ = 0.0;
+  double fps_ = 0.0;
+
 public:
   cycle_measure(uint16_t period) {
     clock_gettime(CLOCK_REALTIME, &before_);
@@ -44,6 +47,10 @@ public:
 
   virtual ~cycle_measure() {
     return;
+  }
+
+  double FPS() {
+    return fps_;
   }
 
   void set_cout (bool is_cout) {
@@ -68,11 +75,11 @@ public:
       memcpy(&before_, &cur, sizeof(cur));
 
       /* ns --> usec --> msec --> sec */
-      double spf = diff / period_ / 1000 / 1000 / 1000;
-      double fps = 1.0 / spf;
+      spf_ = diff / period_ / 1000 / 1000 / 1000;
+      fps_ = 1.0 / spf_;
 
       if (is_cout_) {
-        printf("%9.2lf[fps] (%3.4lf[sec])\n", fps, spf);
+        printf("%9.2lf[fps] (%3.4lf[sec])\n", fps_, spf_);
       }
  
       count_ = 0;

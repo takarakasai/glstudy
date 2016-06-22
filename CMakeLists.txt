@@ -24,7 +24,7 @@ if(APPLE)
 else()
     #set(EXTRA_LIBS glfw GL)
     #set(EXTRA_LIBS glfw GL ode)
-    set(EXTRA_LIBS glfw GL ode SDL2_ttf)
+    set(EXTRA_LIBS glfw GL ode SDL2 SDL2_ttf)
 endif()
 
 link_libraries(

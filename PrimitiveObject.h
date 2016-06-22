@@ -41,9 +41,10 @@ public:
     : width_(width), height_(height) {
 
     /* make vertices */
-    vertices_ = ssg::planeVertices(pos, width_, height_);
+    vertices_ = ssg::planeVertices(Eigen::Vector3f::Zero(), width_, height_);
 
     vertices_.rotate(rot);
+    vertices_.offset(pos);
   }
 
   GLfloat GetWidth()  { return width_;}
