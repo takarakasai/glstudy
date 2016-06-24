@@ -32,6 +32,7 @@ private:
   /* TODO integ constructor's rot/pos */
   Eigen::Matrix3d rot_; /* TODO: */
   Eigen::Vector3d pos_; /* TODO: */
+  Eigen::Matrix3d scale_; /* TODO: */
   //Dp::Math::real scale_;
   Coordinates coords_;
 
@@ -44,7 +45,8 @@ public:
   /* TODO */
   SceneObject(size_t nov, GLenum target = GL_INVALID_ENUM) : 
     vaos(nov), tex(target),
-    rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/,
+    rot_(Eigen::Matrix3d::Identity()), pos_(Eigen::Vector3d::Zero())/*, scale_(1.0)*/, 
+    scale_(Eigen::Matrix3d::Identity()),
     color_(0.5,0.5,0.5,1.0) {
     coords_.Rot() = Eigen::Matrix3d::Identity();
     coords_.Pos() = Eigen::Vector3d::Zero();
@@ -90,6 +92,13 @@ public:
     return 0;
   }
 
+  errno_t SetScale(const Eigen::Vector3d& scale) {
+    scale_(0,0) = scale(0);
+    scale_(1,1) = scale(1);
+    scale_(2,2) = scale(2);
+    return 0;
+  }
+
   errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
     coords_.Rot() = rot_;
     coords_.Pos() = pos_;
@@ -116,8 +125,9 @@ public:
 
     /* TODO: why rot_ * Rot is NG? */
     //Eigen::Matrix3d rot = Rot * (rot_ * scale_);
-    Eigen::Matrix3d rot = Rot * rot_;
+    Eigen::Matrix3d rot = Rot * rot_ * scale_;
     //Eigen::Matrix3d rot = rot_ * Rot;
+    //Eigen::Vector3d pos = Pos + Rot * scale_ * pos_;
     Eigen::Vector3d pos = Pos + Rot * pos_;
 
     /* TODO: move this comment.
@@ -156,16 +166,19 @@ public:
       return -1;
     }
 
+    Eigen::Matrix3d rot = rot_ * scale_;
+    Eigen::Vector3d pos = pos_;
+
     /* TODO: move this comment.
      * OpenGL shall treat matrix as row-first rule
      * Eigen shall treat matrix as row-first rule at default 
      * So you should make transpose matrix
      */
     GLfloat transformMatrix[16] = {
-      (float)rot_(0,0), (float)rot_(1,0), (float)rot_(2,0), 0.0,
-      (float)rot_(0,1), (float)rot_(1,1), (float)rot_(2,1), 0.0,
-      (float)rot_(0,2), (float)rot_(1,2), (float)rot_(2,2), 0.0,
-      (float)pos_(0),   (float)pos_(1)  , (float)pos_(2),   1.0
+      (float)rot(0,0), (float)rot(1,0), (float)rot(2,0), 0.0,
+      (float)rot(0,1), (float)rot(1,1), (float)rot(2,1), 0.0,
+      (float)rot(0,2), (float)rot(1,2), (float)rot(2,2), 0.0,
+      (float)pos(0),   (float)pos(1)  , (float)pos(2),   1.0
     };
 
     /* position transformation */
