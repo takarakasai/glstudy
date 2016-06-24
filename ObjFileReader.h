@@ -11,6 +11,7 @@
 #include "PrimitiveObject.h"
 #include "Link.h"
 #include "DrawableLink.h"
+#include "Mesh.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -165,6 +166,10 @@ namespace ssg {
 
       /* TODO: LTipRot, TipPos */
       auto clink = ImportLinkFile(file);
+      if (!clink) {
+        return -1;
+      }
+
       clink->LTipPos() = xyz;
       clink->LTipRot() = Dp::Math::rpy2mat3(rpy);
       link.AddChild(clink);
@@ -252,19 +257,31 @@ namespace ssg {
         break;
       }
 
+      std::string line;
+      std::getline(ifs, line);
+      std::stringstream ss(line);
+
       /* YRP or RPY */
       Dp::Math::real deg;
       Eigen::Vector3d xyz, rpy;
-      ifs >> xyz(0);
-      ifs >> xyz(1);
-      ifs >> xyz(2);
-      ifs >> deg; rpy(0) = Dp::Math::deg2rad(deg);
-      ifs >> deg; rpy(1) = Dp::Math::deg2rad(deg);
-      ifs >> deg; rpy(2) = Dp::Math::deg2rad(deg);
+      ss >> xyz(0);
+      ss >> xyz(1);
+      ss >> xyz(2);
+      ss >> deg; rpy(0) = Dp::Math::deg2rad(deg);
+      ss >> deg; rpy(1) = Dp::Math::deg2rad(deg);
+      ss >> deg; rpy(2) = Dp::Math::deg2rad(deg);
+
+      auto shape = ImportShapeFile(str);
+
+      Eigen::Vector3d scale;
+      if (ss >> scale(0) && ss >> scale(1) &&ss >> scale(2)) {
+        for (auto shp: shape) {
+          shp->SetScale(scale);
+        }
+      }
 
       //auto rot = rpy2mat3(rpy) * AngleAxisd(Dp::Math::deg2rad(90), Vector3d::UnitX());
       auto rot = Dp::Math::rpy2mat3(rpy);
-      auto shape = ImportShapeFile(str);
       for (auto shp: shape) {
         shp->SetOffset(xyz, rot);
       }
@@ -277,6 +294,23 @@ namespace ssg {
     return shapes;
   }
 
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseSTLFiles (std::ifstream &ifs) {
+    std::cout << "  : Shape STL\n";
+
+    std::string filename;
+    ifs >> filename;
+
+    std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
+
+    auto shape = ssg::ImportObject(filename, 1.0, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
+ 
+    parseShapeAttributes(*shape, ifs);
+
+    shapes.push_back(shape);
+
+    return shapes;
+  }
+ 
   static std::list<std::shared_ptr<InterfaceSceneObject>> parseCylinder (std::ifstream &ifs) {
     std::cout << "  : Shape Cylinder\n";
 
@@ -321,6 +355,7 @@ namespace ssg {
 
   static std::list<std::shared_ptr<InterfaceSceneObject>> parseShape (std::string &attr_type, std::ifstream &ifs) {
       static const std::unordered_map<std::string, std::function<std::list<std::shared_ptr<InterfaceSceneObject>>(std::ifstream&)>> cases = {
+        {"Stl"           , [](std::ifstream &ifs){return parseSTLFiles(ifs);         }},
         {"Cylinder"      , [](std::ifstream &ifs){return parseCylinder(ifs);         }},
         {"Rectangular"   , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
         {"Box"           , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
