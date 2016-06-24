@@ -1,0 +1,14 @@
+RotaryLinkX rleg/HIP_ROLL
+Shape obj/khr3-hv/rleg/HIP_ROLL.shp
+Hull obj/khr3-hv/rleg/HIP_ROLL.shp
+Inertia
+     0.0050
+     0.0 0.0 0.0
+     0.0050 0.0050 0.0050
+     0.0 0.0 0.0
+JointRange 0 -180.0 180.0
+JointInertia 0 0
+JointViscosity 0 0
+
+Child obj/khr3-hv/rleg/HIP_PITCH.lnk 0.0 0.0 -0.0385 0.0 0.0 0.0
+

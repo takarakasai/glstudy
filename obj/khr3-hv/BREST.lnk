@@ -1,0 +1,16 @@
+RotaryLinkZ BREST
+Shape obj/khr3-hv/BREST.shp
+Hull obj/khr3-hv/BREST.shp
+Inertia
+     0.0360
+     0.0 0.0 0.0
+     0.0360 0.0360 0.0360
+     0.0 0.0 0.0
+JointRange 0 -180.0 180.0
+JointInertia 0 0
+JointViscosity 0 0
+
+Child obj/khr3-hv/HEAD.lnk                 0.0115  0.0000 0.0630 0.0 0.0 0.0
+Child obj/khr3-hv/rarm/SHOULDER_PITCH.lnk  0.0115 -0.0480 0.0485 0.0 0.0 0.0
+Child obj/khr3-hv/larm/SHOULDER_PITCH.lnk  0.0115 +0.0480 0.0485 0.0 0.0 0.0
+

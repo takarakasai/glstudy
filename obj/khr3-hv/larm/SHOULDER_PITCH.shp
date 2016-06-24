@@ -1,0 +1,5 @@
+Compound {
+    obj/khr3-hv/Bracket.shp 0.0230 0.0164 0.0 180.0 90.0 0.0 0.001 -0.001 0.001
+    #obj/khr3-hv/Bracket.shp 0.0230 -0.0164 0.0 0.0 90.0 0.0 0.001 -0.001 0.001
+}
+Inertia Auto

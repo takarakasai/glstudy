@@ -1,0 +1,5 @@
+Compound {
+    obj/khr3-hv/FootNeckPlate.shp    0.0090 -0.0022  0.0160   0.0  0.0  0.0  0.001 0.001 0.001
+    obj/khr3-hv/Servo.shp           -0.0115 -0.0150  0.0150 180.0  0.0  0.0 -0.001 0.001 -0.001
+}
+Inertia Auto

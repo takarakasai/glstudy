@@ -1,0 +1,14 @@
+RotaryLinkY larm/LIST_PITCH
+Shape obj/khr3-hv/larm/LIST_PITCH.shp
+Hull obj/khr3-hv/larm/LIST_PITCH.shp
+Inertia
+     0.0050
+     0.0 0.0 0.0
+     0.0050 0.0050 0.0050
+     0.0 0.0 0.0
+JointRange 0 -180.0 180.0
+JointInertia 0 0
+JointViscosity 0 0
+
+#Child obj/khr3-hv/larm/LIST_PITCH.lnk 0.0 0.0 0.02 0.0 0.0 0.0
+

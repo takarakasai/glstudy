@@ -1,0 +1,7 @@
+Compound {
+    obj/khr3-hv/Brest.shp          -0.026  0.0000  0.03300  90.0 -90.0  0.0  0.001 0.001 0.001
+    obj/khr3-hv/Servo.shp           0.000  0.0000  0.06085   0.0   0.0  0.0 -0.001 0.001 0.001
+    obj/khr3-hv/ServoWSurfPart.shp  0.000  0.0449  0.04845 -90.0   0.0  0.0 -0.001 0.001 0.001
+    obj/khr3-hv/ServoWSurfPart.shp  0.000 -0.0449  0.04845  90.0   0.0  0.0 -0.001 0.001 0.001
+}
+Inertia Auto

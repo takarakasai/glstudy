@@ -1,0 +1,12 @@
+RotaryLinkX rleg/ANKLE_ROLL
+Shape obj/khr3-hv/rleg/ANKLE_ROLL.shp
+Hull obj/khr3-hv/rleg/ANKLE_ROLL.shp
+Inertia
+     0.020
+     0.0 0.0 0.0
+     0.020 0.020 0.020
+     0.0 0.0 0.0
+JointRange 0 -180.0 180.0
+JointInertia 0 0
+JointViscosity 0 0
+
