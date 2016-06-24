@@ -9,7 +9,7 @@ endif()
 
 # dDOUBLE & dIDEDOUBLE to be set for using ODE with double precision
 #add_definitions(-std=c++11 -Wall -DdDOUBLE -DdIDEDOUBLE)
-add_definitions(-std=c++11 -Wall -DdDOUBLE -g)
+add_definitions(-std=c++11 -Wall -DdDOUBLE -g -O2)
 
 include_directories(
   .
