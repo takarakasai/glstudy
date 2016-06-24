@@ -63,6 +63,12 @@ namespace ssg {
         pose = pose * scale;
       }
     }
+
+    void scale (Eigen::Vector3f scale) {
+      for (auto &pose: poses) {
+        pose = pose.array() * scale.array();
+      }
+    }
   
   } Vertices;
   
