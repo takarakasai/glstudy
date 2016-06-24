@@ -26,6 +26,10 @@ namespace ssg {
     }
     virtual ~Camera() {};
 
+    Eigen::Vector3d Top() {
+      return top;
+    }
+
     Eigen::Vector3d Dir() {
       return dir_to - pos;
     }
@@ -41,7 +45,7 @@ namespace ssg {
     }
 
     Eigen::Matrix4d ProjectionMatrix() {
-      Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.05, 20.0);
+      Eigen::Matrix4d camera_mat = ssg::cameraPerspectiveMatrix(90.0, 1.0, 0.001, 20.0);
       Eigen::Matrix4d projection_mat = LookAtMatrix() * camera_mat;
       return projection_mat;
     }
