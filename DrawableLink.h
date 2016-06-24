@@ -122,6 +122,10 @@ namespace ssg {
       return 0;
     }
 
+    errno_t SetScale(const Eigen::Vector3d& scale) {
+      return -1;
+    }
+
     errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
       return -1;
     }

@@ -22,7 +22,7 @@
 #include "VertexObject.h"
 #include "Vertex.h"
 #include "Utils.h"
-#include "Mesh.h"
+//#include "Mesh.h"
 
 #include "PartedObject.h"
 
@@ -511,6 +511,12 @@ public:
     return 0;
   }
 
+  errno_t SetScale(const Eigen::Vector3d& scale) {
+    ECALL(wired_.SetScale(scale));
+    ECALL(solid_.SetScale(scale));
+    return 0;
+  }
+
   errno_t SetOffset(const Eigen::Vector3d& pos, const Eigen::Matrix3d& rot) {
     ECALL(wired_.SetOffset(pos, rot));
     ECALL(solid_.SetOffset(pos, rot));
@@ -565,6 +571,7 @@ template<> SwitchableSceneObject<WiredCylinder, SolidCylinder>::SwitchableSceneO
 typedef SwitchableSceneObject<WiredPlane      , SolidPlane      > Plane;
 typedef SwitchableSceneObject<WiredRectangular, SolidRectangular> Rectangular;
 typedef SwitchableSceneObject<WiredCylinder   , SolidCylinder   > Cylinder;
+//typedef SwitchableSceneObject<WiredMesh       , SolidMesh       > Mesh;
 
 #endif
 
