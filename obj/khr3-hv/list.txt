@@ -1,0 +1,22 @@
+
+using following data after installing Go Simulation! by Tecno Road.
+
+C:\Program Files (x86)\TECHNO ROAD\Go Simulation!\ROBOT_PROJECTS\KHR-3HV_perfect\Design\stl_data/
+
+KRS-2552HV.stl                        --> KRS-2552HV.stl
+KRS-2552HV_（面受けパーツ付き）.stl   --> KRS-2552HV_with_surfpart.stl
+ダミーサーボ.stl                      --> dummy_servo.stl
+バックパック.stl                      --> backpack.stl
+プラブラケット.stl                    --> bracket.stl
+手先.stl                              --> ee.stl
+胴体.stl                              --> brest.stl
+脛（板金）.stl                        --> shin_plate.stl
+腕（板金）.stl                        --> arm_plate.stl
+腰（板金）.stl                        --> hip.stl
+腿（板金）.stl                        --> thigh_plate.stl
+足裏.stl                              --> foot_back.stl
+足裏（板金）.stl                      --> foot_back_plate.stl
+足首（板金）.stl                      --> foot_neck_plate.stl
+ダミーサーボ（面受けパーツ付き）.stl  --> dummy_servo_with_surfpart.stl
+頭部.stl                              --> head.stl
+
