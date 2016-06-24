@@ -11,7 +11,10 @@ void main()
 {
   gl_Position = projectionMatrix * transformMatrix * pv;
   f_pos       =                    transformMatrix * pv;
-  f_normal    =                    (transformMatrix * normal).xyz;
+  // TODO: remove 1000.0 with using an uniform variable.
+  mat4 rot = mat4(1000.0);
+  rot[3][3] = 1.0;
+  f_normal    =                    (transformMatrix * rot * normal).xyz;
   f_tex       = tex;
 }
 
