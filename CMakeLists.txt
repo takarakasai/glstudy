@@ -20,7 +20,7 @@ include_directories(
 
 if(APPLE)
   find_library( OpenGL_LIBRARY OpenGL )
-  set(EXTRA_LIBS glfw3 ${OpenGL_LIBRARY})
+  set(EXTRA_LIBS glfw3 ${OpenGL_LIBRARY} ode SDL2 SDL2_ttf)
 else()
     #set(EXTRA_LIBS glfw GL)
     #set(EXTRA_LIBS glfw GL ode)

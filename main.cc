@@ -322,7 +322,11 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 //#include <FTGL/ftgl.h>
 
 //const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
+#if defined(APPLE)
+const char* fontfile = "/System//Library/Fonts/Keyboard.ttf";
+#else
 const char* fontfile = "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf";
+#endif
 
 
 namespace ode {
