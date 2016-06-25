@@ -23,8 +23,7 @@
 // for sleep
 #include "unistd.h"
 
-#define WORLD_STEP 0.003
-
+#define WORLD_STEP 0.001
 
 #define DPRINTF(...) 
 
@@ -201,7 +200,7 @@ namespace ssg {
       //GLfloat vector4[4];
 
       static int count = 0;
-      if (count++ > 10) {
+      if (count++ > 16) {
         count = 0;
       }
 
@@ -252,13 +251,22 @@ namespace ssg {
 }
 
 errno_t handleWindow (ssg::Window &ssgwindow) {
-  const GLfloat veloc = 0.002;
+  static GLfloat veloc = 0.0020;
 
   GLFWwindow* window = ssgwindow.WindowHandle();
   ssg::Camera& camera = ssgwindow.GetCamera();
 
   if (glfwGetKey(window, GLFW_KEY_Q)) {
     return -1;
+  }
+  if (glfwGetKey(window, GLFW_KEY_P)) {
+    if (veloc < 0.0100) {
+      veloc += 0.00001;
+    }
+  } else if (glfwGetKey(window, GLFW_KEY_M)) {
+    if (veloc > 0.0002) {
+      veloc -= 0.00001;
+    }
   }
   if (glfwGetKey(window, GLFW_KEY_PAGE_UP)) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
@@ -276,12 +284,14 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
   }
   if (glfwGetKey(window, GLFW_KEY_UP)) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
+      camera += camera.Top() * veloc * 0.2;
     } else {
       camera += veloc;
     }
   }
   if (glfwGetKey(window, GLFW_KEY_DOWN)) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
+      camera -= camera.Top() * veloc * 0.2;
     } else {
       camera -= veloc;
     }
@@ -361,6 +371,8 @@ namespace ode {
   }
 };
 
+#include <random>
+
 int main()
 {
   ECALL(ssg::InitGlfw());
@@ -374,7 +386,9 @@ int main()
   std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL, NULL);
   std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", NULL, window1->WindowHandle());
 
-  glfwSetWindowPos(window1->WindowHandle(), 0, 1200);
+  if (nom > 1) {
+    glfwSetWindowPos(window1->WindowHandle(), 0, 1200);
+  }
   /* can use after GLFW3.2 */
   //glfwSetWindowMonitor(window1->WindowHandle(), NULL, 0/*x*/, 0/*y*/, 680/*w*/, 480/*h*/, GLFW_DONT_CARE/*rate*/);
 
@@ -404,10 +418,21 @@ int main()
     fprintf(stderr, "fail to load %s.\n", name.c_str());
     return 1;
   }
-
   robot->UpdateCasCoords();
   scene.AddObject(robot);
 
+  std::string khr3_name = "obj/khr3-hv/khr3-hv.obj";
+  auto khr3 = ssg::test2(khr3_name);
+  if (robot == NULL) {
+    fprintf(stderr, "fail to load %s.\n", khr3_name.c_str());
+    return 1;
+  }
+  //khr3->SetOffset(Eigen::Vector3d(0.0,-0.3,0.3), Eigen::Matrix3d::Identity());
+  khr3->WPos() = Eigen::Vector3d(0.0,-0.2,0.1);
+  khr3->UpdateCasCoords();
+  khr3->SetDrawMode(InterfaceSceneObject::DrawMode::WIRED );
+  scene.AddObject(khr3);
+ 
   //std::shared_ptr<SceneObject> field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001);
   //Vector3d pos_ = (Vector3d){0.0,0.0,-0.200};
   //Matrix3d rot_ = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
@@ -418,6 +443,29 @@ int main()
 
   cycle_measure cmeasure(10);
   //cmeasure.set_cout(true);
+
+  constexpr size_t nok = 3+(6*2)+(4*2);
+  std::shared_ptr<SolidSphere> ksphere[nok];
+  std::string khr_lname[] = {
+    "Base", "BREST", "HEAD",
+    "rleg/HIP_YAW", "rleg/HIP_ROLL", "rleg/HIP_PITCH", "rleg/KNEE_PITCH", "rleg/ANKLE_PITCH", "rleg/ANKLE_ROLL",
+    "lleg/HIP_YAW", "lleg/HIP_ROLL", "lleg/HIP_PITCH", "lleg/KNEE_PITCH", "lleg/ANKLE_PITCH", "lleg/ANKLE_ROLL",
+    "rarm/SHOULDER_PITCH", "rarm/SHOULDER_ROLL", "rarm/ELBOW_YAW", "rarm/LIST_PITCH",
+    "larm/SHOULDER_PITCH", "larm/SHOULDER_ROLL", "larm/ELBOW_YAW", "larm/LIST_PITCH"
+  };
+
+  for (size_t i = 0; i < nok; i++) {
+    std::cout << "Name: " << khr_lname[i] << std::endl;
+    //auto plink = robot->FindLink(lname[i-1]);
+    auto rlink = khr3->FindLink(khr_lname[i]);
+    if (!rlink) continue;
+
+    ksphere[i] = std::make_shared<SolidSphere>(Eigen::Vector3f::Zero(), 0.003, 8, 8);
+    scene.AddObject(ksphere[i]);
+    ksphere[i]->SetOffset(rlink->GetWCentroid(), rlink->WRot());
+    auto color = Eigen::Vector4d{0.5,0.0,0.0,1.0};
+    ksphere[i]->SetColor(color);
+  }
 
   /************************************* ODE ****************************************************************/
   constexpr size_t nol = 17;
@@ -470,7 +518,7 @@ int main()
     auto I = rlink->GetIntertia();
     auto C = rlink->GetCentroid();
     if (i == 0) {
-      m.setParameters(1.0, 0,0,0, 1.0,1.0,1.0, 0,0,0);     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
+      m.setParameters(0.8, 0,0,0, 0.8,0.8,0.8, 0,0,0);     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
     } else {
       m.setParameters(M, C(0),C(1),C(2), I(0,0),I(1,1),I(2,2), I(0,1),I(0,2),I(1,2));     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
       m.translate(-C(0),-C(1),-C(2));
@@ -544,6 +592,7 @@ int main()
   std::shared_ptr<ssg::SolidMesh> kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001, _rot, _pos);
   scene.AddObject(kawasaki_field);
 
+  /* TODO */
   dTriMeshDataID Data = dGeomTriMeshDataCreate();
   ssg::Vertices& verts = kawasaki_field->GetVertices();
   std::vector<GLuint>& idx = kawasaki_field->GetIndices();
@@ -616,7 +665,7 @@ int main()
         contact[i].surface.soft_erp = 1.0; //1.0;
         contact[i].surface.soft_cfm = 1e-10;
         contact[i].surface.bounce = 0.00; // (0.0~1.0)   反発係数は0から1まで
-        contact[i].surface.bounce_vel = 10.0; // (0.0以上)   反発に必要な最低速度
+        contact[i].surface.bounce_vel = 3.0; // (0.0以上)   反発に必要な最低速度
   
         // コンタクトジョイント生成                        
         dJointID c = dJointCreateContact(world->id(), jgrp->id(), &contact[i]);
@@ -641,8 +690,8 @@ int main()
 
   //usleep(4000*1000);
   //
-  const dReal ref2 = -50.0;
-  size_t count2 = 1000; 
+  const dReal ref2 = -60.0;
+  size_t count2[] = {1000,2500,4500,6000}; 
   dReal ref_angle_diff[] = {
       0.0, /* base */
       0.0,  Dp::Math::deg2rad(-ref2/2.0),  Dp::Math::deg2rad(ref2), 0.0,
@@ -672,7 +721,7 @@ int main()
   TTF_Font *font = TTF_OpenFont(fontfile, 30);
                          /* R G B A - */
   SDL_Color font_color = { 0, 255, 0,255 }; /* ARGB 0xAARRGGBB */
-  SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
+  //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
   //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
   std::string tmp_str;
   tmp_str = " GL : " + std::to_string(cmeasure.FPS()) + "[fps]";
@@ -733,9 +782,9 @@ int main()
   }
   for (ssize_t i = 0; i < tsurf->h; i++) {
     for (ssize_t j = 0; j < tsurf->w; j++) {
-      if (buff[i*tsurf->w + j] & 0xFF000000 == 0xFF000000) {
+      if ((buff[i*tsurf->w + j] & 0xFF000000) == 0xFF000000) {
         printf("*");
-      } else if (buff[i*tsurf->w + j] & 0xFF000000) {
+      } else if ((buff[i*tsurf->w + j] & 0xFF000000)) {
         printf(".");
       } else {
         printf(" ");
@@ -745,7 +794,7 @@ int main()
   }
   for (ssize_t i = 0; i < tsurf->h; i++) {
     for (ssize_t j = 0; j < tsurf->w; j++) {
-      if (buff[i*tsurf->w + j] & 0xFF000000 == 0xFF000000) {
+      if ((buff[i*tsurf->w + j] & 0xFF000000) == 0xFF000000) {
         printf("*");
       } else if (buff2[i*tsurf->w + j] & 0xFF000000) {
         printf(".");
@@ -755,6 +804,10 @@ int main()
     }
     printf("\n");
   }
+
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_int_distribution<int> ang_diff(-1.0,1.0);
 
   size_t count = 0;
   //ウィンドウが開いている間繰り返す
@@ -774,17 +827,28 @@ int main()
     /* TODO: body centre */
     sphere[0]->SetOffset(robot->WPos(), robot->WRot());
 
+    /* KHR3-HV */
+    for (size_t j = 1; j < nok; j++) {
+      auto rlink = khr3->FindLink(khr_lname[j]);
+      if (!rlink) {
+        std::cout << khr_lname[j] << std::endl;
+        break;
+      }
+      rlink->GetJoint().SetValue(rlink->GetJoint().GetAngle() + Dp::Math::deg2rad(ang_diff(mt)));
+    }
+    khr3->UpdateCasCoords();
+
     scene.Draw();
 
     cmeasure.update();
 
     std::string str;
-    str = " GL : " + std::to_string(cmeasure.FPS() * (WORLD_STEP/0.001)) + "[fps]";
+    str = "SIM : " + std::to_string(cmeasure.FPS() * (WORLD_STEP/0.001)) + "[fps]";
     SDL_FreeSurface(tsurf);
     //tsurf = TTF_RenderUTF8_Blended(font, str.c_str(), font_color);
     tsurf = TTF_RenderText_Blended(font, str.c_str(), font_color);
     SDL_FreeSurface(tsurf2);
-    str = "SIM : " + std::to_string(scene.FPS()) + "[fps]";
+    str = " GL : " + std::to_string(scene.FPS()) + "[fps]";
     tsurf2 = TTF_RenderText_Blended(font, str.c_str(), font_color);
 
     texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
@@ -793,22 +857,26 @@ int main()
     /*********  controller side *************************/
     double Kp = 30;
     // [kgf-cm]
-    //const double KRS2572HV_MAX_TRQ  = 25.0;
-    const double KRS6003RHV_MAX_TRQ = 67.0 * 100;
+    const double KRS2572HV_MAX_TRQ  = 25.0 * (13.2/11.1);
+    //const double KRS6003RHV_MAX_TRQ = 67.0 * (13.2/11.1);
     // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
-    //const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13);
-    const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * 100;
-#define TARGET_MAX_TRQ KRS6003RHV_MAX_TRQ
-#define TARGET_MAX_SPD KRS6003RHV_MAX_SPD
+    const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13) * (13.2/11.1);
+    //const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * (13.2/11.1);
+#define TARGET_MAX_TRQ KRS2572HV_MAX_TRQ
+//#define TARGET_MAX_TRQ KRS6003RHV_MAX_TRQ
+#define TARGET_MAX_SPD KRS2572HV_MAX_SPD
+//#define TARGET_MAX_SPD KRS6003RHV_MAX_SPD
     bool islimit = false;
     for (size_t j = 1; j < nol; j++) {
       auto rlink = robot->FindLink(lname[j]);
       double diff;
-      if (count < count2) {
+      if (count < count2[0]) {
         diff = ref_angle[j] - rlink->GetJoint().GetAngle();
-      } else if (count < count2 * 2) {
+      } else if (count < count2[1]) {
         diff = ref_angle[j] - rlink->GetJoint().GetAngle() + ref_angle_diff[j];
-      } else if (count < count2 * 3) {
+      } else if (count < count2[2]) {
+        diff = ref_angle[j] - rlink->GetJoint().GetAngle() + ref_angle_diff2[j];
+      } else if (count < count2[3]) {
         diff = ref_angle[j] - rlink->GetJoint().GetAngle() + ref_angle_diff2[j];
       } else {
         diff = ref_angle[j] - rlink->GetJoint().GetAngle();
@@ -864,13 +932,19 @@ int main()
       }
       printf("\n");
     }
-    //for (size_t i = 1; i < nol; i++){
-    //  dJointFeedback* jf;
-    //  jf = joint[i]->getFeedback();
-    //  printf(",%+8.3lf", Dp::Phyx::Nm2Kgcm(jf->t2[i]));
-    //}
-    //printf("\n");
-    printf("%lf, %lf, %lf\n", robot->WPos()(0), robot->WPos()(1), robot->WPos()(2));
+#if 0
+    for (size_t i = 1; i < nol; i++){
+      dJointFeedback* jf;
+      jf = joint[i]->getFeedback();
+      //printf("%+8.3lf", (jf->t2[1]));
+      printf("%+8.3lf", Dp::Phyx::Nm2Kgcm(jf->t2[1]));
+      if (i < nol - 1) {
+        printf(",");
+      }
+    }
+    printf("\n");
+#endif
+    //printf("%lf, %lf, %lf\n", robot->WPos()(0), robot->WPos()(1), robot->WPos()(2));
 
     /*********  simulation side *************************/
 #if 1 
@@ -897,9 +971,7 @@ int main()
     //std::cout << "posz  ----: " << posz[0] << "," << posz[1] << "," << posz[2] << "," << posz[3] << "," << posz[4] << std::endl;
    
     space->collide((void*)&coldata, nearCb);
-    //world.step(0.0167);
     world.step(WORLD_STEP);
-    //world.step(0.0001);
     jgrp.empty();
 
 #endif

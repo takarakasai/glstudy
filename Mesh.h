@@ -12,8 +12,10 @@
 
 #include "dp_type.h"
 #include "PartedObject.h"
+#include "PrimitiveObject.h"
 
 namespace ssg {
+
   class SolidMesh : public UniPartedObject {
   private:
   
@@ -61,7 +63,7 @@ namespace ssg {
   private:
   
   public:
-    WiredMesh (const Eigen::Matrix3f &rot, const aiMesh* paiMesh, const Dp::Math::real scale = 1.0) {
+    WiredMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
       /* make vertices */
       const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
       for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
@@ -77,8 +79,9 @@ namespace ssg {
         //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
         //  paiMesh->HasTextureCoords(0) ? "True" : "False");
       }
-      vertices_.rotate(rot);
       vertices_.scale(scale);
+      vertices_.rotate(rot.cast<float>());
+      vertices_.offset(pos.cast<float>());
   
       /* make indices */
       for (unsigned int i = 0 ; i < paiMesh->mNumFaces ; i++) {
@@ -100,10 +103,10 @@ namespace ssg {
       //BuildObject(GL_TRIANGLES);
     }
 
-    WiredMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :WiredMesh(Eigen::Matrix3f::Identity(), paiMesh, scale){}
+    WiredMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :WiredMesh(paiMesh, scale, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()){}
   };
 
-
+  typedef SwitchableSceneObject<WiredMesh       , SolidMesh       > Mesh;
 
   std::shared_ptr<SolidMesh> ImportObject (
           std::string file_name, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
