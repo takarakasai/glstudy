@@ -4,5 +4,5 @@ Hull obj/khr3-hv/Base.shp
 
 Child obj/khr3-hv/rleg/HIP_YAW.lnk 0.0115 -0.021 -0.0045 0.0 0.0 0.0
 Child obj/khr3-hv/lleg/HIP_YAW.lnk 0.0115 +0.021 -0.0045 0.0 0.0 0.0
-Child obj/khr3-hv/BREST.lnk 0.0115 0.0 0.032 0.0 0.0 0.0
+Child obj/khr3-hv/BREST_YAW.lnk    0.0115 0.0 0.032 0.0 0.0 0.0
 

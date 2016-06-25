@@ -1,6 +1,6 @@
-RotaryLinkZ HEAD
-Shape obj/khr3-hv/HEAD.shp
-Hull obj/khr3-hv/HEAD.shp
+RotaryLinkZ HEAD_YAW
+Shape obj/khr3-hv/HEAD_YAW.shp
+Hull obj/khr3-hv/HEAD_YAW.shp
 Inertia
      0.0250
      0.0 0.0 0.0

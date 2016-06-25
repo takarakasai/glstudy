@@ -442,12 +442,12 @@ int main()
   //scene.AddObject(field);
 
   cycle_measure cmeasure(10);
-  //cmeasure.set_cout(true);
+  cmeasure.set_cout(true);
 
   constexpr size_t nok = 3+(6*2)+(4*2);
   std::shared_ptr<SolidSphere> ksphere[nok];
   std::string khr_lname[] = {
-    "Base", "BREST", "HEAD",
+    "Base", "BREST_YAW", "HEAD_YAW",
     "rleg/HIP_YAW", "rleg/HIP_ROLL", "rleg/HIP_PITCH", "rleg/KNEE_PITCH", "rleg/ANKLE_PITCH", "rleg/ANKLE_ROLL",
     "lleg/HIP_YAW", "lleg/HIP_ROLL", "lleg/HIP_PITCH", "lleg/KNEE_PITCH", "lleg/ANKLE_PITCH", "lleg/ANKLE_ROLL",
     "rarm/SHOULDER_PITCH", "rarm/SHOULDER_ROLL", "rarm/ELBOW_YAW", "rarm/LIST_PITCH",
@@ -828,6 +828,7 @@ int main()
     sphere[0]->SetOffset(robot->WPos(), robot->WRot());
 
     /* KHR3-HV */
+#if 0
     for (size_t j = 1; j < nok; j++) {
       auto rlink = khr3->FindLink(khr_lname[j]);
       if (!rlink) {
@@ -837,6 +838,7 @@ int main()
       rlink->GetJoint().SetValue(rlink->GetJoint().GetAngle() + Dp::Math::deg2rad(ang_diff(mt)));
     }
     khr3->UpdateCasCoords();
+#endif
 
     scene.Draw();
 
@@ -857,10 +859,10 @@ int main()
     /*********  controller side *************************/
     double Kp = 30;
     // [kgf-cm]
-    const double KRS2572HV_MAX_TRQ  = 25.0 * (13.2/11.1);
+    const double KRS2572HV_MAX_TRQ  = 25.0 * (13.2/11.1) * 100;
     //const double KRS6003RHV_MAX_TRQ = 67.0 * (13.2/11.1);
     // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
-    const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13) * (13.2/11.1);
+    const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13) * (13.2/11.1) * 100;
     //const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * (13.2/11.1);
 #define TARGET_MAX_TRQ KRS2572HV_MAX_TRQ
 //#define TARGET_MAX_TRQ KRS6003RHV_MAX_TRQ
