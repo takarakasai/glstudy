@@ -322,7 +322,7 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 //#include <FTGL/ftgl.h>
 
 //const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
-#if defined(APPLE)
+#if defined(__APPLE__)
 const char* fontfile = "/System//Library/Fonts/Keyboard.ttf";
 #else
 const char* fontfile = "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf";
@@ -723,6 +723,10 @@ int main()
   /*** FTGL/SDL_ttf ***/
   TTF_Init();
   TTF_Font *font = TTF_OpenFont(fontfile, 30);
+
+  if (!font) {
+    std::cout << "ERROR can not open font : " << fontfile << std::endl;
+  }
                          /* R G B A - */
   SDL_Color font_color = { 0, 255, 0,255 }; /* ARGB 0xAARRGGBB */
   //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
