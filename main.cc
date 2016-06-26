@@ -526,12 +526,9 @@ int main()
     auto M = rlink->GetMass();
     auto I = rlink->GetIntertia();
     auto C = rlink->GetCentroid();
-    if (i == 0) {
-      m.setParameters(0.8, 0,0,0, 0.8,0.8,0.8, 0,0,0);     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
-    } else {
-      m.setParameters(M, C(0),C(1),C(2), I(0,0),I(1,1),I(2,2), I(0,1),I(0,2),I(1,2));     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
-      m.translate(-C(0),-C(1),-C(2));
-    }
+    m.setParameters(M, C(0),C(1),C(2), I(0,0),I(1,1),I(2,2), I(0,1),I(0,2),I(1,2));     // mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
+    m.translate(-C(0),-C(1),-C(2));
+
     link[i].create(world);
     link[i].setMass(&m);
     std::cout << "mass:" << link[i].getMass().mass << ":" << C(0) << "," << C(1) << "," << C(2) << std::endl;
