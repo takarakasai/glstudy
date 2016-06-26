@@ -733,7 +733,7 @@ int main()
     std::cout << "ERROR can not open font : " << fontfile << std::endl;
   }
                          /* R G B A - */
-  SDL_Color font_color = { 0, 255, 0, 255 }; /* ARGB 0xAARRGGBB */
+  SDL_Color font_color = { 0, 0, 0, 255 }; /* ARGB 0xAARRGGBB */
   //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
   //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
   std::string tmp_str;
