@@ -148,7 +148,7 @@ public:
     glUniform4fv(gl_color_loc_id_, 1, &color_(0));
     /* texture */
     if (vertices_.texs.size() > 0) {
-      glUniform1i(gl_tex_loc_id_, GL_TEXTURE0 + tex.GetId());
+      glUniform1i(gl_tex_loc_id_, tex.GetUnitNo());
       ECALL(tex.bind());
     }
 
@@ -187,7 +187,7 @@ public:
     glUniform4fv(gl_color_loc_id_, 1, &color_(0));
     /* texture */
     if (vertices_.texs.size() > 0) {
-      glUniform1i(gl_tex_loc_id_, GL_TEXTURE0 + tex.GetId());
+      glUniform1i(gl_tex_loc_id_, tex.GetUnitNo());
       ECALL(tex.bind());
     }
 

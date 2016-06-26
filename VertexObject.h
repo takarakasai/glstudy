@@ -28,7 +28,14 @@
 
 class texture {
 private:
+  /* GL_MAX_TEXTURE_UNITS include followings, so remove 2 from GL_MAX_TEXTURE_UNITS
+   *   #define GL_ACTIVE_TEXTURE                 0x84E0
+   *   #define GL_CLIENT_ACTIVE_TEXTURE          0x84E1
+   */
+  static constexpr GLenum kMaxUnit = ((GL_MAX_TEXTURE_UNITS - 2) - GL_TEXTURE0);
+
   GLuint id_;
+  GLenum unitno_  = GL_INVALID_ENUM;
   GLenum target_;
 
   GLsizei width_;
@@ -41,13 +48,18 @@ public:
 
   texture(GLenum target) : target_(target), width_(0), height_(0) {
     glGenTextures(1, &id_);
+    //unit_ = GL_TEXTURE0 + (id_ % kMaxUnit);
+    unitno_ = (id_ % kMaxUnit);
+    /* TODO: remove GL_TEXTURE_2D, use argument */
     target_ = GL_TEXTURE_2D;
     return;
   }
 
   virtual ~texture() {
     glDeleteTextures(1, &id_);
-    DPRINTF(" glDeleteTextures: (0x%0x) 0x%x\n", target_, id_);
+    DPRINTF(" glDeleteTextures: (0x%0x) ID:0x%x UNIT:0x%x\n", target_, id_, unitno_);
+    id_     = GL_INVALID_VALUE;
+    unitno_ = GL_INVALID_ENUM;
     return;
   }
 
@@ -55,15 +67,25 @@ public:
     return id_;
   }
 
+  GLenum GetUnitId () {
+    return GL_TEXTURE0 + unitno_;
+  }
+
+  GLenum GetUnitNo () {
+    return unitno_;
+  }
+
   errno_t bind () {
+    glActiveTexture(GetUnitId());
     glBindTexture(target_, id_);
-    DPRINTF(" glBindTexture: 0x%0x 0x%x\n", target_, id_);
+    DPRINTF(" glBindTexture: 0x%0x ID:0x%x UNIT:0x%x\n", target_, id_, unit_);
     return 0;
   }
 
   errno_t unbind (void) {
+    glActiveTexture(GetUnitId());
     glBindBuffer(target_, 0);
-    DPRINTF(" glBindTexture: 0x%0x 0x%x -- unbind\n", target_, id_);
+    DPRINTF(" glBindTexture: 0x%0x ID:0x%x UNIT:0x%x -- unbind\n", target_, id_, unit_);
     return 0;
   }
 

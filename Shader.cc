@@ -170,7 +170,7 @@ namespace ssg {
     ////
     //作成したプログラムオブジェクトを返す
     glDeleteProgram(program);
-    return 0;
+    return -1;
   }
   
   GLuint loadProgram (const char *vert, const std::list<std::string> &attrs, const char *frag, const char *fc) {

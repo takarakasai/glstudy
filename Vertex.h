@@ -15,6 +15,7 @@
 #include "dp_type.h"
 
 //using namespace Eigen;
+#include <iostream>
 
 namespace ssg {
 

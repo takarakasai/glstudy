@@ -160,6 +160,10 @@ namespace ssg {
         "./shader/point.vert", {"pv", "normal", "tex"},
         "./shader/point.frag", "fc");
 
+      if (program_ == -1) {
+        exit(1);
+      }
+
       std::cout << program_ << ":PROGRAM" << std::endl;
 
       projMatLoc_ = glGetUniformLocation(program_, "projectionMatrix");
@@ -167,7 +171,7 @@ namespace ssg {
       texLoc_     = glGetUniformLocation(program_, "texDiff");
       mateMatLoc_ = glGetUniformLocation(program_, "materialColor");
       
-      std::cout << "IDS:" << projMatLoc_ << ", " << trnsMatLoc_ << ", " << mateMatLoc_ << std::endl;
+      std::cout << "IDS:" << projMatLoc_ << ", " << trnsMatLoc_ << ", " << mateMatLoc_ << texLoc_ << std::endl;
 
       //cmeasure.set_cout(true);
     }
@@ -323,7 +327,8 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 
 //const char* fontfile = "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf";
 #if defined(__APPLE__)
-const char* fontfile = "/System//Library/Fonts/Keyboard.ttf";
+//const char* fontfile = "/System//Library/Fonts/Keyboard.ttf";
+const char* fontfile = "/usr//local/texlive/2015/texmf-dist/fonts/truetype/public/gnu-freefont/FreeMonoBold.ttf";
 #else
 const char* fontfile = "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf";
 #endif
@@ -388,7 +393,7 @@ int main()
   }
   
   std::unique_ptr<ssg::Window> window1 = ssg::Window::Create(680, 480, "window1", NULL, NULL);
-  std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", NULL, window1->WindowHandle());
+  //std::unique_ptr<ssg::Window> window2 = ssg::Window::Create(680, 480, "window2", NULL, window1->WindowHandle());
 
   if (nom > 1) {
     glfwSetWindowPos(window1->WindowHandle(), 0, 1200);
@@ -401,7 +406,7 @@ int main()
   ECALL(ssg::InitGlew());
 
   auto camera1 = window1->GetCamera();
-  auto camera2 = window2->GetCamera();
+  //auto camera2 = window2->GetCamera();
 
   ssg::Scene scene;
 
@@ -412,9 +417,9 @@ int main()
    */
   /* TODO: remove miliseconds */
   usleep(100*1000);
-  window2->Hide();
+  //window2->Hide();
   scene.AddWindow(window1);
-  scene.AddWindow(window2);
+  //scene.AddWindow(window2);
 
   std::string name = "./obj/eV/eV.obj";
   auto robot = ssg::test2(name);
@@ -427,11 +432,11 @@ int main()
 
   std::string khr3_name = "obj/khr3-hv/khr3-hv.obj";
   auto khr3 = ssg::test2(khr3_name);
-  if (robot == NULL) {
+  if (khr3 == NULL) {
     fprintf(stderr, "fail to load %s.\n", khr3_name.c_str());
     return 1;
   }
-  //khr3->SetOffset(Eigen::Vector3d(0.0,-0.3,0.3), Eigen::Matrix3d::Identity());
+  ////khr3->SetOffset(Eigen::Vector3d(0.0,-0.3,0.3), Eigen::Matrix3d::Identity());
   khr3->WPos() = Eigen::Vector3d(0.0,-0.2,0.1);
   khr3->UpdateCasCoords();
   khr3->SetDrawMode(InterfaceSceneObject::DrawMode::WIRED );
@@ -728,7 +733,7 @@ int main()
     std::cout << "ERROR can not open font : " << fontfile << std::endl;
   }
                          /* R G B A - */
-  SDL_Color font_color = { 0, 255, 0,255 }; /* ARGB 0xAARRGGBB */
+  SDL_Color font_color = { 0, 255, 0, 255 }; /* ARGB 0xAARRGGBB */
   //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
   //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
   std::string tmp_str;
@@ -773,7 +778,10 @@ int main()
   texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
   scene.AddObject(texobj2);
 
-
+  auto texobj3 = std::make_shared<SolidPlane>(txtrot, Eigen::Vector3f(0.0,0.0,0.3 + 0.4 * aspect * 2), 0.4, 0.4 * aspect);
+  texobj3->SetColor(clr);
+  texobj3->GetTexture().setdata(s->w, s->h, GL_BGRA, GL_UNSIGNED_BYTE, s->pixels);
+  scene.AddObject(texobj3);
 
   uint32_t* buff = (uint32_t*)tsurf->pixels;
   uint32_t* buff2 = (uint32_t*)s->pixels;

@@ -26,12 +26,18 @@ namespace ssg {
       for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
         const aiVector3D* pPos      = &(paiMesh->mVertices[i]);
         const aiVector3D* pNormal   = &(paiMesh->mNormals[i]);
-        const aiVector3D* pTexCoord = paiMesh->HasTextureCoords(0) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
- 
-        vertices_.push(
-            Eigen::Vector3f(pPos->x, pPos->y, pPos->z),
-            Eigen::Vector3f(pNormal->x, pNormal->y, pNormal->z),
-            Eigen::Vector2f(pTexCoord->x, pTexCoord->y));
+
+        if (paiMesh->HasTextureCoords(0)) {
+          const aiVector3D* pTexCoord = &(paiMesh->mTextureCoords[0][i]);
+          vertices_.push(
+              Eigen::Vector3f(pPos->x, pPos->y, pPos->z),
+              Eigen::Vector3f(pNormal->x, pNormal->y, pNormal->z),
+              Eigen::Vector2f(pTexCoord->x, pTexCoord->y));
+        } else {
+          vertices_.push(
+              Eigen::Vector3f(pPos->x, pPos->y, pPos->z),
+              Eigen::Vector3f(pNormal->x, pNormal->y, pNormal->z));
+        }
         // printf("%lf %lf %lf\n",pNormal->x, pNormal->y, pNormal->z);
         //printf("%+7.2lf, %+7.2lf, %+7.2lf : %+7.2lf, %+7.2lf || %+7.2lf, %+7.2lf, %+7.2lf -- %s\n",
         //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
