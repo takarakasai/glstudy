@@ -12,7 +12,6 @@
 #include <string>
 
 #include "dp_type.h"
-
 #include "Link.h"
 #include "Shader.h"
 
@@ -439,7 +438,7 @@ int main()
   ////khr3->SetOffset(Eigen::Vector3d(0.0,-0.3,0.3), Eigen::Matrix3d::Identity());
   khr3->WPos() = Eigen::Vector3d(0.0,-0.2,0.1);
   khr3->UpdateCasCoords();
-  khr3->SetDrawMode(InterfaceSceneObject::DrawMode::WIRED );
+  //khr3->SetDrawMode(InterfaceSceneObject::DrawMode::WIRED );
   scene.AddObject(khr3);
  
   //std::shared_ptr<SceneObject> field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001);
@@ -496,15 +495,222 @@ int main()
   //-1.0472,1,0,6.92709e-310,6.92709e-310
   std::cout << "angle ====: " << angle[0] << "," << angle[1] << "," << angle[2] << "," << angle[3] << "," << angle[4] << std::endl;
 
-#if 1
   dInitODE();
   dWorld world;
+  dSpace* space = new dHashSpace();
   //dWorldSetContactMaxCorrectingVel(world.id(), 20);
+  //world.setGravity(0.0, 0.0, -9.8);
   world.setGravity(0.0, 0.0, -9.8);
   //world.setGravity(0, 9.9, 0);
   //world.setERP(dReal erp);
   //world.setCFM(dReal cfm);
   world.setContactSurfaceLayer(0.08);
+
+  class ODELink {
+  private:
+    std::shared_ptr<Link> parent_;
+    /* should be Link not DrawableLInk */
+    std::shared_ptr<ssg::DrawableLink> link_;
+    std::list<std::shared_ptr<ODELink>> ode_clinks_;
+
+    dBody body_;
+    dMass mass_;
+    std::shared_ptr<dJoint> joint_;
+    dJointFeedback feedback_;
+
+    /* for collision */
+    std::list<dTriMeshDataID> col_datas_;
+    std::list<dGeomID> geom_ids_;
+    dGeom *test_geom;
+
+  public:
+    ODELink() {
+    }
+    virtual ~ODELink() {
+    }
+
+    void SetLink (std::shared_ptr<ssg::DrawableLink> link) {
+      link_ = link;
+    }
+
+    std::shared_ptr<dJoint> FindJoint(std::string& jname) {
+      if (link_->GetName() == jname) {
+        return joint_;
+      }
+
+      for (auto &ode_clink : ode_clinks_) {
+        auto joint = ode_clink->FindJoint(jname);
+        if (joint) {
+          return joint;
+        }
+      }
+
+      return nullptr;
+    }
+
+  private:
+    /* TODO: world */
+    errno_t configLink (dWorld &world) {
+      mass_.setZero();
+
+      auto M = link_->GetMass();
+      auto I = link_->GetIntertia();
+      auto C = link_->GetCentroid();
+      // setParameters --> mass, cx,cy,cz, I11,I22,I33,I12,I13,I23
+      mass_.setParameters(M, C(0),C(1),C(2), I(0,0),I(1,1),I(2,2), I(0,1),I(0,2),I(1,2));
+      mass_.translate(-C(0),-C(1),-C(2));
+
+      body_.create(world);
+      body_.setMass(&mass_);
+      std::cout << " " << link_->GetName() << " mass:" << body_.getMass().mass << ":" << C(0) << "," << C(1) << "," << C(2) << std::endl;
+      auto WC = link_->GetWCentroid();
+      std::cout << " " << "             :" << WC(0) << "," << WC(1) << "," << WC(2) << std::endl;
+      body_.setPosition(WC(0), WC(1), WC(2)); // (dReal x, dReal y, dReal z)
+  
+      dMatrix3 rot3;
+      ode::mat2mat3(link_->WRot(), rot3);
+      body_.setRotation(rot3);
+
+      return 0;
+    }
+
+    errno_t linkWorld (dWorld &world, ODELink *oparent, std::shared_ptr<Link> parent) {
+      ECALL(configLink(world));
+
+      parent_ = parent;
+      if (parent_) {
+        /* TODO: switch following to any kind of Hinge Joint. */
+        auto joint = std::make_shared<dHingeJoint>(world/*, 0 *//* JointGroupID */);
+        joint->attach(oparent->body_, body_);
+
+        joint_ = joint;
+        auto wpos = link_->WPos();
+        joint->setAnchor(wpos(0), wpos(1), wpos(2));
+  
+        Eigen::Vector3d waxis = link_->WRot() * link_->GetJoint().Axis();
+        joint->setAxis(waxis(0), waxis(1), waxis(2));
+        //std::cout << "KHR WAXIS:" << waxis(0) << "," << waxis(1) << "," << waxis(2) << std::endl;
+ 
+        std::cout << "MIN:" << link_->GetJoint().GetMinAngle() << std::endl;
+        std::cout << "MAX:" << link_->GetJoint().GetMaxAngle() << std::endl;
+        joint_->setParam(dParamLoStop, link_->GetJoint().GetMinAngle()); //-Dp::Math::deg2rad(180));
+        joint_->setParam(dParamHiStop, link_->GetJoint().GetMaxAngle());//+Dp::Math::deg2rad(180));
+  
+        joint_->setFeedback(&feedback_);
+
+        joint_ = joint;
+      } else {
+        /* TODO: 2nd argument */
+        auto joint = std::make_shared<dFixedJoint>(world/*, 0 */);
+        //joint->attach(body_, 0); /* body1, body2 */
+        joint->set();
+
+        joint_ = joint;
+      }
+
+      for (auto link : link_->GetChilds()) {
+        auto ode_clink = std::make_shared<ODELink>();
+
+        std::shared_ptr<ssg::DrawableLink> clink = std::dynamic_pointer_cast<ssg::DrawableLink>(link);
+        ode_clink->SetLink(clink);
+        ode_clinks_.push_back(ode_clink);
+
+        //ECALL(ode_clink->linkWorld(world, link_/*parent*/));
+        ECALL(ode_clink->linkWorld(world, this, link_/*parent*/));
+
+        //ode_clink->joint_->attach(body_, ode_clink->body_);
+
+        //std::cout << " " << link_->GetName() << " <-> " << clink->GetName() << std::endl;;
+      }
+
+      return 0;
+    }
+
+  public:
+    errno_t MakeCollider (const dSpace &space) {
+      /* TODO: currently only TriMesh collision available */
+      auto objs = link_->GetShapes();
+      for (auto &obj : objs) {
+        if (link_->GetName() !=  "rleg/ANKLE_ROLL" && link_->GetName() !=  "lleg/ANKLE_ROLL") break;
+        ssg::Vertices& verts = obj->GetVertices();
+        std::vector<GLuint>& idx = obj->GetIndices();
+        dTriMeshDataID data = dGeomTriMeshDataCreate();
+
+        std::vector<Eigen::Vector3f> poses; /* position vectors  */
+        for (auto &pose : verts.poses) {
+          poses.push_back(pose * 0.001);
+        }
+        dGeomTriMeshDataBuildSingle1(
+                data,
+                &verts.poses[0], 3 * sizeof(float), verts.poses.size(),
+                &idx[0], idx.size(), 3*sizeof(GLuint), (void*)&verts.norms[0]);
+        
+        dGeomID geom_id = dCreateTriMesh(space.id()/*spaceID*/, data, NULL, NULL, NULL);
+        dGeomSetData(geom_id/*geomID*/, data/*TriMesh*/);
+
+        //geom[0]->setBody(link[0].id());
+        dGeomSetBody(geom_id, body_);
+        std::cout << " GEOMID:" << geom_id << std::endl;
+        
+        //test_geom = new dSphere (space, 0.001);
+        //test_geom = new dBox (space, 0.005, 0.003, 0.030); /* lx, ly, lz */
+
+        //std::cout << " NAME: "  << link_->GetName() << ", " << test_geom->id() << std::endl;
+
+        //test_geom->setBody(body_.id());
+
+        col_datas_.push_back(data);
+        geom_ids_.push_back(geom_id);
+      }
+
+      for (auto ode_clink : ode_clinks_) {
+        ode_clink->MakeCollider(space);
+      }
+
+      return 0;
+    }
+
+  public:
+    errno_t LinkWorld (dWorld &world) {
+      return linkWorld(world, NULL, NULL);
+    }
+
+    errno_t World2Link (dWorld &world) {
+      if (link_ == NULL) return -1;
+      /* TODO: when body_ is not created the, exception is happen at body_.getPosition etc.. */
+
+      if (parent_) {
+        /* TODO: must remove down cast */
+        //auto angle = ((std::shared_ptr<dHingeJoint>)joint_)->getAngle();
+        std::shared_ptr<dHingeJoint> jnt = std::dynamic_pointer_cast<dHingeJoint>(joint_);
+        auto angle = jnt->getAngle();
+
+        /* TODO: 
+         *  ワールド座標系の関節角度からリンク座標系の関節角度を算出する */
+        Eigen::Vector3d axis = (link_->WRot() * link_->GetJoint().Axis()) * angle;
+        auto axis2 = link_->WRot().transpose() * axis;
+        link_->GetJoint().SetValue(-axis2.dot(link_->GetJoint().Axis()));
+      } else {
+        const dReal* pos4 = body_.getPosition();
+        link_->WPos() = ode::vec32vec(pos4);
+        const dReal* rot34 = body_.getRotation();
+        link_->WRot() = ode::mat32mat(rot34);
+      }
+
+      //Eigen::Vector3d pos(body_.getPosition()[0], body_.getPosition()[1], body_.getPosition()[2]);
+      //Eigen::Matrix3d rot = Eigen::Matrix3d::Identity();
+      for (auto ode_clink : ode_clinks_) {
+        ode_clink->World2Link(world);
+      }
+ 
+      return 0;
+    }
+  };
+
+  ODELink ode_link;
+  ode_link.SetLink(khr3);
+  ode_link.LinkWorld(world);
+  ode_link.MakeCollider(*space);
   
   //dBodyID     link[NUM];  // link[0] is base link
   //dJointID      joint[NUM]
@@ -518,7 +724,6 @@ int main()
 
   for (size_t i = 0; i < nol; i++) {
     std::cout << "Name: " << lname[i] << std::endl;
-    //auto plink = robot->FindLink(lname[i-1]);
     auto rlink = robot->FindLink(lname[i]);
 
     dMass m;
@@ -534,8 +739,41 @@ int main()
     std::cout << "mass:" << link[i].getMass().mass << ":" << C(0) << "," << C(1) << "," << C(2) << std::endl;
     link[i].setPosition(rlink->GetWCentroid()(0), rlink->GetWCentroid()(1), rlink->GetWCentroid()(2)); // (dReal x, dReal y, dReal z)
 
-    //std::cout << rlink->GetWCentroid() << std::endl;
-    //std::cout << rlink->WPos() << std::endl;
+    dMatrix3 rot3;
+    ode::mat2mat3(rlink->WRot(), rot3);
+    link[i].setRotation(rot3);
+  }
+
+  dFixedJoint* fjoint;
+  joint[0] = fjoint = new dFixedJoint(world, 0);
+  //joint[0]->attach(link[0], 0);         // body1, body2
+  fjoint->set();
+  for (size_t j = 1; j < nol; j++) {
+    std::cout << "Name: " << lname[j] << std::endl;
+    auto rlink = robot->FindLink(lname[j]);
+
+    dHingeJoint* jnt;
+    joint[j] = jnt = new dHingeJoint(world/*, 0 *//* JointGroupID*/);
+    /* 根元リンクはBaseに拘束する */
+    if (j == 1 || j == 5 || j == 9 || j == 13) {
+      joint[j]->attach(link[0], link[j]);
+    } else {
+      joint[j]->attach(link[j-1], link[j]);
+    }
+    jnt->setAnchor(rlink->WPos()(0), rlink->WPos()(1), rlink->WPos()(2));
+
+    Eigen::Vector3d waxis = rlink->WRot() * rlink->GetJoint().Axis();
+    std::cout << "WAXIS:" << waxis(0) << "," << waxis(1) << "," << waxis(2) << std::endl;
+    jnt->setAxis(waxis(0), waxis(1), waxis(2));
+    jnt->setParam(dParamLoStop, -Dp::Math::deg2rad(120));
+    jnt->setParam(dParamHiStop, +Dp::Math::deg2rad(120));
+
+    jnt->setFeedback(&jFb[j]);
+  }
+
+  for (size_t i = 0; i < nol; i++) {
+    std::cout << "Name: " << lname[i] << std::endl;
+    auto rlink = robot->FindLink(lname[i]);
 
     if (i == 0) {
       sphere[i] = std::make_shared<WiredSphere>(Eigen::Vector3f::Zero(), 0.03, 8, 8);
@@ -550,52 +788,16 @@ int main()
     sphere[i]->SetOffset(rlink->GetWCentroid(), rlink->WRot());
     auto color = Eigen::Vector4d{0.5,0.0,0.0,1.0};
     sphere[i]->SetColor(color);
-    dMatrix3 rot3;
-    ode::mat2mat3(rlink->WRot(), rot3);
-    link[i].setRotation(rot3);
-    //link[i].setRotation(); // (dMatrix3)
+
   }
 
-  dFixedJoint* fjoint;
-  joint[0] = fjoint = new dFixedJoint(world, 0);
-  //joint[0]->attach(link[0], 0);         // body1, body2
-  fjoint->set();
-  //std::cout << rlink->WPos()(0) << "," << rlink->WPos()(1) << "," << rlink->WPos()(2) << std::endl;
-  for (size_t j = 1; j < nol; j++) {
-    std::cout << "Name: " << lname[j] << std::endl;
-    //auto plink = robot->FindLink(lname[j-1]);
-    auto rlink = robot->FindLink(lname[j]);
-
-    dHingeJoint* jnt;
-    joint[j] = jnt = new dHingeJoint(world, 0);
-    // dParamLoStop, angle – 0.001f
-    /* 根元リンクはBaseに拘束する */
-    if (j == 1 || j == 5 || j == 9 || j == 13) {
-      joint[j]->attach(link[0], link[j]);
-    } else {
-      joint[j]->attach(link[j-1], link[j]);
-    }
-    jnt->setAnchor(rlink->WPos()(0), rlink->WPos()(1), rlink->WPos()(2));
-    //std::cout << rlink->WPos()(0) << "," << rlink->WPos()(1) << "," << rlink->WPos()(2) << std::endl;
-    Eigen::Vector3d waxis = rlink->WRot() * rlink->GetJoint().Axis();
-    std::cout << "WAXIS:" << waxis(0) << "," << waxis(1) << "," << waxis(2) << std::endl;
-    jnt->setAxis(waxis(0), waxis(1), waxis(2));
-    jnt->setParam(dParamLoStop, -Dp::Math::deg2rad(120));
-    jnt->setParam(dParamHiStop, +Dp::Math::deg2rad(120));
-    //jnt->setParam(dParamLoStop, -(rlink->GetJoint().GetOffsetAngle() - Dp::Math::deg2rad(10)));
-    //jnt->setParam(dParamHiStop, -(rlink->GetJoint().GetOffsetAngle() + Dp::Math::deg2rad(10)));
-
-    jnt->setFeedback(&jFb[j]);
-  }
-#endif
   dJointGroup jgrp;
-  dSpace* space = new dHashSpace();
 
   /* mesh */
   Vector3d _pos = (Vector3d){0.5,0.0,-0.210};
   //Vector3d _pos = (Vector3d){0.5,0.0,-0.350};
   Matrix3d _rot = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
-  std::shared_ptr<ssg::SolidMesh> kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", 0.001, _rot, _pos);
+  auto kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", Eigen::Vector3d(0.001,0.001,0.001), _rot, _pos);
   scene.AddObject(kawasaki_field);
 
   /* TODO */
@@ -837,6 +1039,9 @@ int main()
     robot->WRot() = ode::mat32mat(rot34);
     robot->UpdateCasCoords();
 
+    ode_link.World2Link(world);
+    khr3->UpdateCasCoords();
+
     /* TODO: body centre */
     sphere[0]->SetOffset(robot->WPos(), robot->WRot());
 
@@ -853,7 +1058,7 @@ int main()
     khr3->UpdateCasCoords();
 #endif
 
-    scene.Draw();
+    //scene.Draw();
 
     cmeasure.update();
 
@@ -868,8 +1073,23 @@ int main()
 
     texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
     texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
+    
+    /********* KHR controller side *************************/
+    {
+      std::shared_ptr<dJoint> jnt;
+      jnt = ode_link.FindJoint(khr_lname[5]);
+      if (jnt) {
+        jnt->setParam(dParamVel, -200);
+        jnt->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(20.0));
+      }
+      jnt = ode_link.FindJoint(khr_lname[7]);
+      if (jnt) {
+        jnt->setParam(dParamVel, +200);
+        jnt->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(20.0));
+      }
+    }
 
-    /*********  controller side *************************/
+    /********* eV controller side *************************/
     double Kp = 30;
     // [kgf-cm]
     const double KRS2572HV_MAX_TRQ  = 25.0 * (13.2/11.1) * 100;
@@ -984,6 +1204,12 @@ int main()
     }
     //std::cout << "angle ----: " << angle[0] << "," << angle[1] << "," << angle[2] << "," << angle[3] << "," << angle[4] << std::endl;
     //std::cout << "posz  ----: " << posz[0] << "," << posz[1] << "," << posz[2] << "," << posz[3] << "," << posz[4] << std::endl;
+
+    for (size_t i = 0; i < nok; i++) {
+      auto rlink = khr3->FindLink(khr_lname[i]);
+      if (!rlink) continue;
+      ksphere[i]->SetOffset(rlink->GetWCentroid(), rlink->WRot());
+    }
    
     space->collide((void*)&coldata, nearCb);
     world.step(WORLD_STEP);

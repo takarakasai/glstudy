@@ -76,6 +76,10 @@ namespace ssg {
       objs_.splice(objs_.end(), objs);
     }
 
+    std::list<std::shared_ptr<InterfaceSceneObject>> GetShapes() {
+      return objs_;
+    }
+
   public: /* InterfaceSceneObject */
     errno_t Exec(void) {
       for (auto &obj : objs_) {
@@ -133,6 +137,16 @@ namespace ssg {
     errno_t SetColor(Eigen::Vector4d& color) {
       return -1;
     }
+
+    /* TODO : should be removed, but InterfaceSceneObject required this currently */ 
+    ssg::Vertices& GetVertices() {
+      return (*objs_.begin())->GetVertices();
+    }
+    /* TODO : should be removed, but InterfaceSceneObject required this currently */ 
+    std::vector<GLuint>& GetIndices() {
+      return (*objs_.begin())->GetIndices();
+    }
+
 
     errno_t SetDrawMode (InterfaceSceneObject::DrawMode mode) {
       for (auto &obj : objs_) {

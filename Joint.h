@@ -108,6 +108,8 @@ public:
   virtual errno_t SetAngle (Dp::Math::real value) {val_(0) = value; return 0;};
   virtual Dp::Math::real GetOffsetAngle () {return oval_(0);};
   virtual Dp::Math::real GetAngle () {return val_(0);};
+  virtual Dp::Math::real GetMaxAngle () {return max_val_(0);};
+  virtual Dp::Math::real GetMinAngle () {return min_val_(0);};
 
   std::string& GetName() { return name_;};
 };

@@ -2,6 +2,8 @@
 #ifndef INTERFACE_SCENE_OBJECT_H
 #define INTERFACE_SCENE_OBJECT_H
 
+#include <vector>
+
 #include <eigen3/Eigen/Core>
 
 /* TODO:remove */
@@ -13,6 +15,8 @@
 
 #include "dp_type.h"
 #include "CasCoords.h"
+/* TODO shall be removed */
+#include "Vertex.h"
 
 // interface
 class InterfaceSceneObject {
@@ -40,6 +44,10 @@ public:
   } DrawMode;
   virtual errno_t SetDrawMode(DrawMode mode) = 0;
   virtual Coordinates& GetCoordinates() = 0;
+
+  /* for collision mesh data */
+  virtual ssg::Vertices& GetVertices() = 0;
+  virtual std::vector<GLuint>& GetIndices() = 0;
 
   //InterfaceSceneObject() {};
   virtual ~InterfaceSceneObject() {};

@@ -109,12 +109,12 @@ private:
   std::list<std::weak_ptr<CasCoords>> cnodes;
 
 private:
-  void SetParent (std::weak_ptr<CasCoords> node) {
+  errno_t SetParent (std::weak_ptr<CasCoords> node) {
     pnode = node;
+    return 0;
   }
 
 public:
-
   CasCoords() {
   }
 

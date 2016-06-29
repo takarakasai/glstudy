@@ -1,4 +1,4 @@
-RotaryLinkY rarm/LIST_PITCH
+RotaryLinkZ rarm/LIST_PITCH
 Shape obj/khr3-hv/rarm/LIST_PITCH.shp
 Hull obj/khr3-hv/rarm/LIST_PITCH.shp
 Inertia

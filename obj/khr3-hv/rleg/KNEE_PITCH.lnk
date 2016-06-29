@@ -1,4 +1,4 @@
-RotaryLinkX rleg/KNEE_PITCH
+RotaryLinkY rleg/KNEE_PITCH
 Shape obj/khr3-hv/rleg/KNEE_PITCH.shp
 Hull obj/khr3-hv/rleg/KNEE_PITCH.shp
 Inertia
@@ -6,7 +6,7 @@ Inertia
      0.0 0.0 0.0
      0.060 0.060 0.060
      0.0 0.0 0.0
-JointRange 0 -180.0 180.0
+JointRange 0 -119.0 119.0
 JointInertia 0 0
 JointViscosity 0 0
 

@@ -118,7 +118,8 @@ namespace ssg {
       return parseJointRange(ifs, link.GetJoint());
   }
 
-  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile (std::string &filepath);
+  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile
+      (std::string &filepath, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos);
 
   static errno_t parseShape (std::ifstream &ifs, Link &link) {
 
@@ -126,7 +127,7 @@ namespace ssg {
       ifs >> file;
 
       /* TODO dynamic_cast to be removed */
-      auto shapes = ImportShapeFile(file);
+      auto shapes = ImportShapeFile(file, Eigen::Vector3d::Ones(), Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
       //dynamic_cast<DrawableLink&>(link).AddShape(shapes);
       link.AddShape(shapes);
 
@@ -271,20 +272,27 @@ namespace ssg {
       ss >> deg; rpy(1) = Dp::Math::deg2rad(deg);
       ss >> deg; rpy(2) = Dp::Math::deg2rad(deg);
 
-      auto shape = ImportShapeFile(str);
-
-      Eigen::Vector3d scale;
-      if (ss >> scale(0) && ss >> scale(1) &&ss >> scale(2)) {
-        for (auto shp: shape) {
-          shp->SetScale(scale);
-        }
-      }
+      Eigen::Vector3d scale(1.,1.,1.);
+      ss >> scale(0);
+      ss >> scale(1);
+      ss >> scale(2);
+      //if (ss >> scale(0) && ss >> scale(1) &&ss >> scale(2)) {
+      //  for (auto shp: shape) {
+      //    shp->SetScale(scale);
+      //  }
+      //}
 
       //auto rot = rpy2mat3(rpy) * AngleAxisd(Dp::Math::deg2rad(90), Vector3d::UnitX());
       auto rot = Dp::Math::rpy2mat3(rpy);
-      for (auto shp: shape) {
-        shp->SetOffset(xyz, rot);
-      }
+      //for (auto shp: shape) {
+      //  shp->SetOffset(xyz, rot);
+      //}
+ 
+      auto shape = ImportShapeFile(str, scale, rot, xyz);
+
+      //for (auto shp: shape) {
+      //  shp->SetOffset(xyz, rot);
+      //}
 
       //shapes.push_back(shape);
       shapes.splice(shapes.end(), shape);
@@ -294,7 +302,8 @@ namespace ssg {
     return shapes;
   }
 
-  static std::list<std::shared_ptr<InterfaceSceneObject>> parseSTLFiles (std::ifstream &ifs) {
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseSTLFiles
+      (std::ifstream &ifs, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
     std::cout << "  : Shape STL\n";
 
     std::string filename;
@@ -302,16 +311,20 @@ namespace ssg {
 
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
-    auto shape = ssg::ImportObject(filename, 1.0, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
+    auto shape = ssg::ImportObject(filename, scale, rot, pos);
+    //auto shape = ssg::ImportObject(filename, scale, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
  
     parseShapeAttributes(*shape, ifs);
+
+    //shape->SetOffset(pos, rot);
 
     shapes.push_back(shape);
 
     return shapes;
   }
  
-  static std::list<std::shared_ptr<InterfaceSceneObject>> parseCylinder (std::ifstream &ifs) {
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseCylinder
+      (std::ifstream &ifs, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
     std::cout << "  : Shape Cylinder\n";
 
     Dp::Math::real radius, height;
@@ -320,18 +333,22 @@ namespace ssg {
 
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
-    //auto shape = std::make_shared<WiredCylinder>(
+    //auto rot2 = rot * Eigen::AngleAxisd(Dp::Math::deg2rad(90), (Vector3d){1,0,0}).toRotationMatrix();
     auto shape = std::make_shared<Cylinder>(
+      //rot2.cast<float>(),  pos.cast<float>(), radius, height, (size_t)20);
       Eigen::AngleAxisf(Dp::Math::deg2rad(90), (Vector3f){1,0,0}).toRotationMatrix(),  Eigen::Vector3f::Zero(), radius, height, (size_t)20);
 
     parseShapeAttributes(*shape, ifs);
+
+    shape->SetOffset(pos, rot);
 
     shapes.push_back(shape);
 
     return shapes;
   }
 
-  static std::list<std::shared_ptr<InterfaceSceneObject>> parseRectangular (std::ifstream &ifs) {
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseRectangular
+      (std::ifstream &ifs, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
     std::cout << "  : Shape Box\n";
 
     Dp::Math::real lx,ly,lz;
@@ -342,24 +359,28 @@ namespace ssg {
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
     auto shape = std::make_shared<Rectangular>(
+        //rot.cast<float>(), pos.cast<float>(), lx, ly, (float)lz);
         Eigen::AngleAxisf(Dp::Math::deg2rad(0), (Vector3f){0,0,0}).toRotationMatrix(),
         Eigen::Vector3f::Zero(), lx, ly, (float)lz);
-    //auto shape = std::make_shared<WiredRectangular>(Eigen::Vector3f::Zero(), lx, ly, lz);
 
     parseShapeAttributes(*shape, ifs);
+
+    shape->SetOffset(pos, rot);
 
     shapes.push_back(shape);
 
     return shapes;
   }
 
-  static std::list<std::shared_ptr<InterfaceSceneObject>> parseShape (std::string &attr_type, std::ifstream &ifs) {
-      static const std::unordered_map<std::string, std::function<std::list<std::shared_ptr<InterfaceSceneObject>>(std::ifstream&)>> cases = {
-        {"Stl"           , [](std::ifstream &ifs){return parseSTLFiles(ifs);         }},
-        {"Cylinder"      , [](std::ifstream &ifs){return parseCylinder(ifs);         }},
-        {"Rectangular"   , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
-        {"Box"           , [](std::ifstream &ifs){return parseRectangular(ifs);      }},
-        {"Compound"      , [](std::ifstream &ifs){return parseCompound(ifs);         }}
+  static std::list<std::shared_ptr<InterfaceSceneObject>> parseShape_
+      (std::string &attr_type, std::ifstream &ifs, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
+      static const std::unordered_map<std::string, std::function<std::list<std::shared_ptr<InterfaceSceneObject>>
+          (std::ifstream&, const Eigen::Vector3d&, const Eigen::Matrix3d&, const Eigen::Vector3d&)>> cases = {
+        {"Stl"           , [](std::ifstream &ifs, const Eigen::Vector3d &scale, const  Eigen::Matrix3d &rot, const  Eigen::Vector3d &pos){return parseSTLFiles(ifs, scale, rot, pos);    }},
+        {"Cylinder"      , [](std::ifstream &ifs, const Eigen::Vector3d &scale, const  Eigen::Matrix3d &rot, const  Eigen::Vector3d &pos){return parseCylinder(ifs, scale, rot, pos);    }},
+        {"Rectangular"   , [](std::ifstream &ifs, const Eigen::Vector3d &scale, const  Eigen::Matrix3d &rot, const  Eigen::Vector3d &pos){return parseRectangular(ifs, scale, rot, pos); }},
+        {"Box"           , [](std::ifstream &ifs, const Eigen::Vector3d &scale, const  Eigen::Matrix3d &rot, const  Eigen::Vector3d &pos){return parseRectangular(ifs, scale, rot, pos); }},
+        {"Compound"      , [](std::ifstream &ifs, const Eigen::Vector3d &scale, const  Eigen::Matrix3d &rot, const  Eigen::Vector3d &pos){return parseCompound(ifs);                     }}
       };
       //static const std::unordered_map<std::string, std::function<errno_t(std::ifstream&, Link&)>> cases = {
       //  {"JointInertia"  , parseJointInertia  },
@@ -369,10 +390,11 @@ namespace ssg {
       auto result = cases.find(attr_type);
       /* TODO */
       std::list<std::shared_ptr<InterfaceSceneObject>> def;
-      return result != cases.end() ? result->second(ifs) : def ;
+      return result != cases.end() ? result->second(ifs, scale, rot, pos) : def ;
   }
 
-  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile (std::string &filepath) {
+  std::list<std::shared_ptr<InterfaceSceneObject>> ImportShapeFile
+      (std::string &filepath, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
 
     std::list<std::shared_ptr<InterfaceSceneObject>> shapes;
 
@@ -385,7 +407,7 @@ namespace ssg {
     std::string str;
     ifs >> str;
 
-    shapes = parseShape(str, ifs);
+    shapes = parseShape_(str, ifs, scale, rot, pos);
 
     return shapes;
   }

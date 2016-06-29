@@ -37,6 +37,9 @@ private:
   }
 
 protected:
+  /* TODO */
+  //std::shared_ptr<Link> parent_ = NULL;
+  Link *parent_ = NULL;
   std::list<std::shared_ptr<Link>> clinks_;
 
 public:
@@ -136,9 +139,26 @@ public:
     return 0;
   }
 
+  //std::shared_ptr<Link> GetParent () {
+  Link* GetParent () {
+    return parent_;
+  }
+
+  errno_t SetParent (Link *link) {
+    parent_ = link;
+    return 0;
+  }
+
+  std::list<std::shared_ptr<Link>> GetChilds () {
+    return clinks_;
+  }
+
   errno_t AddChild (std::shared_ptr<Link> clink) {
     CasCoords::AddChild(clink);
+
+    clink->SetParent(this);
     clinks_.push_back(clink);
+
     return 0;
   }
 

@@ -94,6 +94,11 @@ public:
     }
   };
 
+  std::vector<GLuint>& GetIndices() {
+   /* TODO currently only first of indices will return. */
+    return indices_[0];
+  }
+
   BiPartedObject() : SceneObject(kNofIdx) {};
   virtual ~BiPartedObject() {};
 };
@@ -134,6 +139,11 @@ public:
       i++;
     }
   };
+
+  std::vector<GLuint>& GetIndices() {
+   /* TODO currently only first of indices will return. */
+    return indices_[0];
+  }
 
   TriPartedObject() : SceneObject(3) {};
   virtual ~TriPartedObject() {};

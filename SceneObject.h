@@ -54,10 +54,6 @@ public:
 
   virtual ~SceneObject() {};
 
-  ssg::Vertices& GetVertices() {
-    return vertices_;
-  }
-
   texture& GetTexture() {
     return tex;
   }
@@ -207,6 +203,13 @@ public:
   virtual Coordinates& GetCoordinates() {
     return coords_;
   }
+
+  ssg::Vertices& GetVertices() {
+    return vertices_;
+  }
+  /* TODO */
+  //std::vector<GLuint>& GetIndices() = 0;
+
 };
 
 #endif

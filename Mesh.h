@@ -20,7 +20,7 @@ namespace ssg {
   private:
   
   public:
-    SolidMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
+    SolidMesh (const aiMesh* paiMesh, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
       /* make vertices */
       const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
       for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
@@ -43,7 +43,7 @@ namespace ssg {
         //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
         //  paiMesh->HasTextureCoords(0) ? "True" : "False");
       }
-      vertices_.scale(scale);
+      vertices_.scale(scale.cast<float>());
       vertices_.rotate(rot.cast<float>());
       vertices_.offset(pos.cast<float>());
   
@@ -63,13 +63,17 @@ namespace ssg {
     }
 
     //SolidMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :SolidMesh(paiMesh, scale, Eigen::Matrix3f::Identity()){}
+    SolidMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :
+        SolidMesh(paiMesh, scale, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()){}
+    SolidMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) :
+        SolidMesh(paiMesh, Eigen::Vector3d(scale, scale, scale), rot, pos) {};
   };
 
   class WiredMesh : public UniPartedObject {
   private:
   
   public:
-    WiredMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
+    WiredMesh (const aiMesh* paiMesh, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
       /* make vertices */
       const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
       for (unsigned int i = 0 ; i < paiMesh->mNumVertices ; i++) {
@@ -85,7 +89,7 @@ namespace ssg {
         //  pPos->x, pPos->y, pPos->z, pTexCoord->x, pTexCoord->y, pNormal->x, pNormal->y, pNormal->z,
         //  paiMesh->HasTextureCoords(0) ? "True" : "False");
       }
-      vertices_.scale(scale);
+      vertices_.scale(scale.cast<float>());
       vertices_.rotate(rot.cast<float>());
       vertices_.offset(pos.cast<float>());
   
@@ -109,12 +113,14 @@ namespace ssg {
       //BuildObject(GL_TRIANGLES);
     }
 
-    WiredMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :WiredMesh(paiMesh, scale, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()){}
+    WiredMesh (const aiMesh* paiMesh, Dp::Math::real scale = 1.0) :
+        WiredMesh(paiMesh, scale, Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero()){}
+    WiredMesh (const aiMesh* paiMesh, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) :
+        WiredMesh(paiMesh, Eigen::Vector3d(scale, scale, scale), rot, pos) {};
   };
 
-  typedef SwitchableSceneObject<WiredMesh       , SolidMesh       > Mesh;
-
-  std::shared_ptr<SolidMesh> ImportObject (
+#if 0
+  std::shared_ptr<Mesh> ImportObject (
           std::string file_name, const Dp::Math::real scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
     Assimp::Importer Importer;
   
@@ -132,7 +138,43 @@ namespace ssg {
 
     if (pScene->mNumMeshes == 1) {
       printf("NumMeshes == 1 ==> UniMesh\n");
-      return std::make_shared<SolidMesh>(pScene->mMeshes[0], scale, rot, pos);
+      return std::make_shared<Mesh>(pScene->mMeshes[0], scale, rot, pos);
+    }
+
+    printf("NumMeshes > 1 not supported\n");
+    return NULL;
+  }
+#endif
+}
+
+template<> SwitchableSceneObject<ssg::WiredMesh, ssg::SolidMesh>::SwitchableSceneObject (
+        const aiMesh* paiMesh, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos)
+  : mode_(SOLID), wired_(paiMesh, scale, rot, pos), solid_(paiMesh, scale, rot, pos) {
+}
+
+typedef SwitchableSceneObject<ssg::WiredMesh       , ssg::SolidMesh       > Mesh;
+
+namespace ssg {
+
+  std::shared_ptr<Mesh> ImportObject (
+          std::string file_name, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos) {
+    Assimp::Importer Importer;
+  
+    const aiScene* pScene = 
+      Importer.ReadFile(file_name.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+    // aiProcess_FlipUVs
+  
+    if (pScene == NULL) {
+      printf("Error parsing '%s': '%s'\n", file_name.c_str(), Importer.GetErrorString());
+      return NULL;
+    }
+
+    printf(" mesh size : %u\n", pScene->mNumMeshes);
+    printf(" mate size : %u\n", pScene->mNumMaterials);
+
+    if (pScene->mNumMeshes == 1) {
+      printf("NumMeshes == 1 ==> UniMesh\n");
+      return std::make_shared<Mesh>(pScene->mMeshes[0], scale, rot, pos);
     }
 
     printf("NumMeshes > 1 not supported\n");

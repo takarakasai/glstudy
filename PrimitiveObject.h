@@ -468,6 +468,8 @@ public:
 
 };
 
+class aiMesh;
+
 template <class A, class B> class SwitchableSceneObject : public InterfaceSceneObject {
   InterfaceSceneObject::DrawMode mode_;
   A wired_;
@@ -541,6 +543,8 @@ public:
 
   SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat radius, GLfloat height, size_t sectors);
 
+  SwitchableSceneObject (const aiMesh* paiMesh, const Eigen::Vector3d &scale, const Eigen::Matrix3d &rot, const Eigen::Vector3d &pos);
+
   errno_t SetDrawMode(DrawMode mode) {
     mode_ = mode;
     return 0;
@@ -554,6 +558,23 @@ public:
       default:    return wired_.GetCoordinates();;
     }
   }
+
+  ssg::Vertices& GetVertices() {
+    switch(mode_) {
+      case WIRED: return wired_.GetVertices();
+      case SOLID: return solid_.GetVertices();
+      default:    return wired_.GetVertices();;
+    }
+  }
+
+  std::vector<GLuint>& GetIndices() {
+    switch(mode_) {
+      case WIRED: return wired_.GetIndices();
+      case SOLID: return solid_.GetIndices();
+      default:    return wired_.GetIndices();;
+    }
+  }
+
 };
 
 template<> SwitchableSceneObject<WiredPlane, SolidPlane>::SwitchableSceneObject (const Eigen::Matrix3f& rot, Eigen::Vector3f pos, GLfloat width, GLfloat height) 
