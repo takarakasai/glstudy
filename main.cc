@@ -22,7 +22,7 @@
 // for sleep
 #include "unistd.h"
 
-#define WORLD_STEP 0.001
+#define WORLD_STEP 0.005
 
 #define DPRINTF(...) 
 
@@ -202,10 +202,10 @@ namespace ssg {
       GLfloat matrix44[16];
       //GLfloat vector4[4];
 
-      static int count = 0;
-      if (count++ > 16) {
-        count = 0;
-      }
+      //static int count = 0;
+      //if (count++ > 16) {
+      //  count = 0;
+      //}
 
       for (auto &win : windows_) {
         /* TODO IsVisible & Hide */
@@ -214,11 +214,11 @@ namespace ssg {
         }
         win->SetCurrent();
 
-       /* TODO: */
-       glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
-       glEnable(GL_DEPTH_TEST);
-       glDepthFunc(GL_LEQUAL);
-       //glDepthFunc(GL_CULL_FACE);
+        /* TODO: */
+        glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+        //glDepthFunc(GL_CULL_FACE);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // start using shader program
@@ -234,10 +234,10 @@ namespace ssg {
           // obj.Draw(locations_list);
         }
 
-        if (count == 0) {
+        //if (count == 0) {
           cmeasure.update();
           win->SwapBuffers();
-        }
+        //}
       }
       
       /* Get EVENT */
@@ -332,6 +332,82 @@ const char* fontfile = "/usr//local/texlive/2015/texmf-dist/fonts/truetype/publi
 const char* fontfile = "/usr/share/fonts/truetype/freefont/FreeMonoBold.ttf";
 #endif
 
+static bool is_continue = true;
+static cycle_measure g_cmeasure(10);
+
+static void do_worker (ssg::Scene &scene) {
+
+    //cycle_measure g_cmeasure(10);
+    //g_cmeasure.set_cout(true);
+
+    scene.RootWindow().SetCurrent();
+
+    /*** FTGL/SDL_ttf ***/
+    TTF_Init();
+    TTF_Font *font = TTF_OpenFont(fontfile, 30);
+  
+    if (!font) {
+      std::cout << "ERROR can not open font : " << fontfile << std::endl;
+    }
+                           /* R G B A - */
+    SDL_Color font_color = { 0, 0, 0, 255 }; /* ARGB 0xAARRGGBB */
+    //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
+    //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
+    std::string tmp_str;
+    tmp_str = " GL : " + std::to_string(g_cmeasure.FPS()) + "[fps]";
+    SDL_Surface* tsurf = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
+    tmp_str = "SIM : " + std::to_string(g_cmeasure.FPS()) + "[fps]";
+    SDL_Surface* tsurf2 = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
+
+    double aspect = tsurf->h / (double)(tsurf->w);
+    Eigen::Matrix3f txtrot = AngleAxisf(Dp::Math::deg2rad(-90), Eigen::Vector3f::UnitY()).toRotationMatrix() *
+                             AngleAxisf(Dp::Math::deg2rad( 90), Eigen::Vector3f::UnitZ()).toRotationMatrix();
+
+    auto texobj = std::make_shared<SolidPlane>(txtrot, Eigen::Vector3f(0.0,0.0,0.3), 0.4, 0.4 * aspect);
+    auto clr = Eigen::Vector4d(1.0,1.0,1.0,0.0);
+    texobj->SetColor(clr);
+    texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
+    scene.AddObject(texobj);
+  
+    auto texobj2 = std::make_shared<SolidPlane>(txtrot, Eigen::Vector3f(0.0,0.0,0.3 + 0.4 * aspect), 0.4, 0.4 * aspect);
+    texobj2->SetColor(clr);
+    texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
+    scene.AddObject(texobj2);
+  
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    int count = 0;
+
+    while(is_continue) {
+      scene.Draw();
+
+      //g_cmeasure.update();
+
+      if (count++ < 10) {
+        continue;
+      }
+      count = 0;
+
+      std::string str;
+      str = "SIM : " + std::to_string(g_cmeasure.FPS() * (WORLD_STEP/0.001)) + "[fps]";
+      SDL_FreeSurface(tsurf);
+      //tsurf = TTF_RenderUTF8_Blended(font, str.c_str(), font_color);
+      tsurf = TTF_RenderText_Blended(font, str.c_str(), font_color);
+      SDL_FreeSurface(tsurf2);
+      str = " GL : " + std::to_string(scene.FPS()) + "[fps]";
+      tsurf2 = TTF_RenderText_Blended(font, str.c_str(), font_color);
+
+      texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
+      texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
+
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    TTF_CloseFont(font);
+    TTF_Quit();
+
+    return;
+}
 
 namespace ode {
   Eigen::Vector3d vec32vec (const dReal *vec3) {
@@ -380,6 +456,7 @@ namespace ode {
 };
 
 #include <random>
+#include <thread>
 
 int main()
 {
@@ -448,9 +525,6 @@ int main()
   
   std::shared_ptr<SceneObject> field = std::make_shared<SolidRectangular>(Eigen::Vector3f{0,0,-0.220}, 1.0, 1.0, 0.05);
   //scene.AddObject(field);
-
-  cycle_measure cmeasure(10);
-  cmeasure.set_cout(true);
 
   constexpr size_t nok = 3+(6*2)+(4*2);
   std::shared_ptr<SolidSphere> ksphere[nok];
@@ -631,7 +705,13 @@ int main()
       /* TODO: currently only TriMesh collision available */
       auto objs = link_->GetShapes();
       for (auto &obj : objs) {
-        if (link_->GetName() !=  "rleg/ANKLE_ROLL" && link_->GetName() !=  "lleg/ANKLE_ROLL") break;
+        if (link_->GetName() !=  "rleg/ANKLE_ROLL" &&
+            link_->GetName() !=  "lleg/ANKLE_ROLL" &&
+            link_->GetName() !=  "rarm/LIST_PITCH" &&
+            link_->GetName() !=  "larm/LIST_PITCH" &&
+            link_->GetName() !=  "BREST_YAW"       &&
+            link_->GetName() !=  "HEAD_YAW"
+           ) break;
         ssg::Vertices& verts = obj->GetVertices();
         std::vector<GLuint>& idx = obj->GetIndices();
         dTriMeshDataID data = dGeomTriMeshDataCreate();
@@ -923,7 +1003,7 @@ int main()
     auto rlink = robot->FindLink(lname[j]);
     ref_angle[j] = rlink->GetJoint().GetAngle();
   }
-
+#ifdef FTGL
   /*** FTGL/SDL_ttf ***/
   TTF_Init();
   TTF_Font *font = TTF_OpenFont(fontfile, 30);
@@ -936,9 +1016,9 @@ int main()
   //SDL_Color font_bgcolor = { 0,0,0,255 }; /* ARGB */
   //SDL_Surface* tsurf = TTF_RenderUTF8_Shaded(font, "C++17er", font_color, font_bgcolor);
   std::string tmp_str;
-  tmp_str = " GL : " + std::to_string(cmeasure.FPS()) + "[fps]";
+  tmp_str = " GL : " + "[fps]";
   SDL_Surface* tsurf = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
-  tmp_str = "SIM : " + std::to_string(cmeasure.FPS()) + "[fps]";
+  tmp_str = "SIM : " + "[fps]";
   SDL_Surface* tsurf2 = TTF_RenderText_Blended(font, tmp_str.c_str(), font_color);
 
   //Create a surface to the correct size in RGB format, and copy the old image
@@ -1019,12 +1099,25 @@ int main()
     }
     printf("\n");
   }
+#endif
 
   std::random_device rd;
   std::mt19937 mt(rd());
   std::uniform_int_distribution<int> ang_diff(-1.0,1.0);
 
   size_t count = 0;
+
+#if 1
+  std::thread t1(do_worker, std::ref(scene));
+# else
+  try {
+    std::thread t1(do_worker);
+    t1.join();
+  } catch (std::exception &ex) {
+    std::cerr << ex.what() << std::endl;
+  }
+#endif
+
   //ウィンドウが開いている間繰り返す
   while (glfwWindowShouldClose(scene.RootWindow().WindowHandle()) == GL_FALSE)
   {
@@ -1058,7 +1151,9 @@ int main()
     khr3->UpdateCasCoords();
 #endif
 
-    //scene.Draw();
+    g_cmeasure.update();
+#if 0
+    scene.Draw();
 
     cmeasure.update();
 
@@ -1073,6 +1168,7 @@ int main()
 
     texobj->GetTexture().setdata(tsurf->w, tsurf->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf->pixels);
     texobj2->GetTexture().setdata(tsurf2->w, tsurf2->h, GL_BGRA, GL_UNSIGNED_BYTE, tsurf2->pixels);
+#endif
     
     /********* KHR controller side *************************/
     {
@@ -1219,9 +1315,12 @@ int main()
     count++;
   }
 
+#if FTGL
   TTF_CloseFont(font);
   TTF_Quit();
+#endif
 
   return 0;
 }
+
 

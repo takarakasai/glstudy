@@ -6,7 +6,7 @@ Inertia
      0.0 0.0 0.0
      0.0050 0.0050 0.0050
      0.0 0.0 0.0
-JointRange 0 -180.0 180.0
+JointRange 0 -45.0 45.0
 JointInertia 0 0
 JointViscosity 0 0
 
