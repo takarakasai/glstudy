@@ -92,7 +92,7 @@ public:
     return *(joint_);
   }
 
-  std::shared_ptr<Joint> FindJoint(std::string& str) {
+  std::shared_ptr<Joint> FindJoint(const std::string& str) {
     /* TODO: duplicate */
     if (joint_->GetName() == str) {
       return joint_;
@@ -112,7 +112,7 @@ public:
 
   /* TODO: not Link* */
   //std::shared_ptr<Link> FindLink(std::string& str) {
-  Link* FindLink(std::string& str) {
+  Link* FindLink(const std::string& str) {
     /* TODO: duplicate */
     if (GetName() == str) {
       return this;

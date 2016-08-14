@@ -34,6 +34,8 @@
 }
 #endif
 
+static bool is_sim_run = false;
+
 namespace ssg {
   static void error_callback(int error, const char* description)
   {
@@ -261,6 +263,9 @@ errno_t handleWindow (ssg::Window &ssgwindow) {
 
   if (glfwGetKey(window, GLFW_KEY_Q)) {
     return -1;
+  }
+  if (glfwGetKey(window, GLFW_KEY_S)) {
+    is_sim_run = true;
   }
   if (glfwGetKey(window, GLFW_KEY_P)) {
     if (veloc < 0.0100) {
@@ -528,7 +533,7 @@ int main()
 
   constexpr size_t nok = 3+(6*2)+(4*2);
   std::shared_ptr<SolidSphere> ksphere[nok];
-  std::string khr_lname[] = {
+  const std::string khr_lname[] = {
     "Base", "BREST_YAW", "HEAD_YAW",
     "rleg/HIP_YAW", "rleg/HIP_ROLL", "rleg/HIP_PITCH", "rleg/KNEE_PITCH", "rleg/ANKLE_PITCH", "rleg/ANKLE_ROLL",
     "lleg/HIP_YAW", "lleg/HIP_ROLL", "lleg/HIP_PITCH", "lleg/KNEE_PITCH", "lleg/ANKLE_PITCH", "lleg/ANKLE_ROLL",
@@ -552,7 +557,7 @@ int main()
   /************************************* ODE ****************************************************************/
   constexpr size_t nol = 17;
   std::shared_ptr<WiredSphere> sphere[nol];
-  std::string lname[] = {
+  const std::string lname[] = {
     "Base",
     "FR/HIP_YAW", "FR/HIP_PITCH", "FR/KNEE_PITCH", "FR/ANKLE_PITCH",
     "FL/HIP_YAW", "FL/HIP_PITCH", "FL/KNEE_PITCH", "FL/ANKLE_PITCH",
@@ -607,7 +612,7 @@ int main()
       link_ = link;
     }
 
-    std::shared_ptr<dJoint> FindJoint(std::string& jname) {
+    std::shared_ptr<dJoint> FindJoint(const std::string& jname) {
       if (link_->GetName() == jname) {
         return joint_;
       }
@@ -878,7 +883,9 @@ int main()
   //Vector3d _pos = (Vector3d){0.5,0.0,-0.350};
   Matrix3d _rot = AngleAxisd(Dp::Math::deg2rad(90), Eigen::Vector3d::UnitX()).toRotationMatrix();
   auto kawasaki_field = ssg::ImportObject("obj/field/ring_assy.stl", Eigen::Vector3d(0.001,0.001,0.001), _rot, _pos);
-  scene.AddObject(kawasaki_field);
+  //auto kawasaki_field = ssg::ImportObject("../obj/stl/0_ring-assy_sw0005.prt.dae", Eigen::Vector3d(0.001,0.001,0.001), _rot, _pos);
+  //auto kawasaki_field = ssg::ImportObject("/home/kasai/work/study/dart/data/sdf/atlas/ring.dae", Eigen::Vector3d(0.001,0.001,0.001), _rot, _pos);
+    scene.AddObject(kawasaki_field);
 
   /* TODO */
   dTriMeshDataID Data = dGeomTriMeshDataCreate();
@@ -978,7 +985,7 @@ int main()
 
   //usleep(4000*1000);
   //
-  const dReal ref2 = -60.0;
+  dReal ref2 = -60.0;
   size_t count2[] = {1000,2500,4500,6000}; 
   dReal ref_angle_diff[] = {
       0.0, /* base */
@@ -1003,7 +1010,25 @@ int main()
     auto rlink = robot->FindLink(lname[j]);
     ref_angle[j] = rlink->GetJoint().GetAngle();
   }
-#ifdef FTGL
+
+  ref2 = 60.0;
+  size_t count3[] = {1000,1500,2000}; 
+  dReal khr_ref_angle_diff[] = {
+      0.0, /* base */
+      0.0, 0.0, /* brest yaw, head yaw */
+      0.0, 0.0,  Dp::Math::deg2rad(-ref2/2.0),  Dp::Math::deg2rad(ref2), Dp::Math::deg2rad(-ref2/2.0), 0.0, /* rleg */
+      0.0, 0.0,  Dp::Math::deg2rad(-ref2/2.0),  Dp::Math::deg2rad(ref2), Dp::Math::deg2rad(-ref2/2.0), 0.0, /* lleg */
+      0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0
+  };
+  dReal khr_ref_angle[nok];
+  for (size_t j = 1; j < nok; j++) {
+    auto rlink = khr3->FindLink(khr_lname[j]);
+    if (!rlink) continue;
+    khr_ref_angle[j] = rlink->GetJoint().GetAngle();
+  }
+
+#if 0
   /*** FTGL/SDL_ttf ***/
   TTF_Init();
   TTF_Font *font = TTF_OpenFont(fontfile, 30);
@@ -1109,6 +1134,9 @@ int main()
 
 #if 1
   std::thread t1(do_worker, std::ref(scene));
+  sched_param sch;
+  sch.sched_priority = 0;
+  pthread_setschedparam(t1.native_handle(), SCHED_RR, &sch);
 # else
   try {
     std::thread t1(do_worker);
@@ -1171,27 +1199,41 @@ int main()
 #endif
     
     /********* KHR controller side *************************/
-    {
-      std::shared_ptr<dJoint> jnt;
-      jnt = ode_link.FindJoint(khr_lname[5]);
-      if (jnt) {
-        jnt->setParam(dParamVel, -200);
-        jnt->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(20.0));
+    for (size_t j = 1; j < nok; j++) {
+      constexpr double Kp = 30;
+      double TARGET_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22);
+      double TARGET_MAX_TRQ = 14.0;
+      auto joint = ode_link.FindJoint(khr_lname[j]);
+      auto rlink = khr3->FindLink(khr_lname[j]);
+      double diff;
+      if (count < count3[0]) {
+        diff = khr_ref_angle[j] - rlink->GetJoint().GetAngle();
+      } else if (count < count3[1]) {
+        diff = khr_ref_angle[j] - rlink->GetJoint().GetAngle() + khr_ref_angle_diff[j];
+      } else {
+        diff = khr_ref_angle[j] - rlink->GetJoint().GetAngle();
       }
-      jnt = ode_link.FindJoint(khr_lname[7]);
-      if (jnt) {
-        jnt->setParam(dParamVel, +200);
-        jnt->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(20.0));
+      double cspd = Kp * diff;
+      if (cspd < 0) {
+        if (-cspd > (TARGET_MAX_SPD)){
+          cspd = -(TARGET_MAX_SPD);
+        }
+      } else {
+        if ( cspd > TARGET_MAX_SPD){
+          cspd =  TARGET_MAX_SPD;
+        }
       }
+      joint->setParam(dParamVel, -cspd);
+      joint->setParam(dParamFMax, Dp::Phyx::Kgcm2Nm(TARGET_MAX_TRQ));
     }
 
     /********* eV controller side *************************/
     double Kp = 30;
     // [kgf-cm]
-    const double KRS2572HV_MAX_TRQ  = 25.0 * (13.2/11.1) * 100;
+    const double KRS2572HV_MAX_TRQ  = 10.0 * (13.2/11.1);
     //const double KRS6003RHV_MAX_TRQ = 67.0 * (13.2/11.1);
     // [rad/sec] <-- [deg/sec] <-- 0.13[sec/60deg]
-    const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.13) * (13.2/11.1) * 100;
+    const double KRS2572HV_MAX_SPD  = Dp::Math::deg2rad(60.0 / 0.08) * (13.2/11.1);
     //const double KRS6003RHV_MAX_SPD = Dp::Math::deg2rad(60.0 / 0.22) * (13.2/11.1);
 #define TARGET_MAX_TRQ KRS2572HV_MAX_TRQ
 //#define TARGET_MAX_TRQ KRS6003RHV_MAX_TRQ
@@ -1312,7 +1354,8 @@ int main()
     jgrp.empty();
 
 #endif
-    count++;
+    if (is_sim_run)
+      count++;
   }
 
 #if FTGL
